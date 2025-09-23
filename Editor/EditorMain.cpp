@@ -11,6 +11,7 @@
 #include "Gui/Windows/MenuWindow.h"
 #include "Gui/Windows/SceneView.h"
 
+
 #define PROJECT_NAME  "Genesis Engine - Editor"
 
 void config_style() {
@@ -151,11 +152,18 @@ void SetProjectArguments(std::string command, std::string value)
 	if (command == "-p" || command == "-project" || command == "-proj")
 	{
 		PathManager::ProjectPath = value;
+		char lc = value.back();
+		if (lc != '\\')
+			PathManager::ProjectPath += "\\";
+
 	}
 
 	if (command == "-r" || command == "-resources" || command == "-res")
 	{
 		PathManager::ResourcesPath = value;
+		char lc = value.back();
+		if (lc != '\\')
+			PathManager::ResourcesPath += "\\";
 	}
 }
 
@@ -170,7 +178,9 @@ void SetArguments(int argc, char* argv[])
 	}
 	else
 	{
+		LOG_WARNING("No arguments set, falling back to default filepaths!");
 		SetProjectArguments("-p", R"(D:\Project_Genesis\TestProjects\DevTest_Project\)");
+		SetProjectArguments("-r", R"(D:\Project_Genesis\GenesisEngine\Resources\)");
 	}
 
 	PathManager::AssetDatabasePath = PathManager::FromProjectRelative(R"(.AssetDatabase\)");

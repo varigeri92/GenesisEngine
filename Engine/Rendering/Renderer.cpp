@@ -148,7 +148,7 @@ void gns::rendering::Renderer::InitImGui()
 
     ImGui_ImplVulkan_Init(&init_info);
 
-    ImGui_ImplVulkan_CreateFontsTexture();
+    //ImGui_ImplVulkan_CreateFontsTexture();
 
     // add the destroy the imgui created structures
     m_device->m_deletionQueue.Push([=]() {

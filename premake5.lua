@@ -3,8 +3,8 @@ VULKAN_SDK = os.getenv("VULKAN_SDK")
 VulkanLibDir = VULKAN_SDK .. "/Lib"
 VulkanIncludeDir =  VULKAN_SDK .. "/Include"
 SDL_DIR = VULKAN_SDK .. "/Include/SDL2"
-PROJECT_DIR = "D:\\Genesis-TestProjects\\TestProj_1"
-RESOURCE_DIR = "D:\\GenesisEngine\\Resources\\"
+PROJECT_DIR = "D:\\Project_Genesis\\TestProjects\\DevTest_Project"
+RESOURCE_DIR = "D:\\Project_Genesis\\GenesisEngine\\Resources"
 
 --os.execute("cmake submodules/assimp/CMakeLists.txt -B submodules/assimp/build");
 
@@ -105,7 +105,7 @@ project "Sandbox"
     }
     files { "Sandbox/**.h", "Sandbox/**.c", "Sandbox/**.cpp", "Sandbox/**.hpp" }
     dependson { "Engine", "Game", "ImGui"}
-    debugargs { "-p", PROJECT_DIR, "-r", RESOURCE_DIR }
+    debugargs { "-p", PROJECT_DIR, "-r", RESOURCE_DIR, "-c", "??"}
 
 project "ImGui"
     kind "StaticLib"
