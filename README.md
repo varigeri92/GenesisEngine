@@ -8,7 +8,7 @@ was not intended to share... i took some shortcuts by setting up the project.
 
 How to build:
 1. Clone with submodules.
-    * Clone or download the [test project], (This is the PROJECT_DIR you edit in the premake file) if there is no project it will just chrash.
+    * Clone or download the [Test Project], (This is the PROJECT_DIR you edit in the premake file) if there is no project it will just chrash.
 3. Open Premake.lua and edit the Paths PROJECT_DIR and RESOURCE_DIR(This is currently "\GenesisEngine\Resources" should be absolute!)
     * Build the Assimp CMake Project.
     * Build the Assimp libraries in Release configuration.
@@ -21,10 +21,11 @@ How to build:
 right click to look around in the scene WASD to fly around.
 
 To load object Drag and drop them from the content browser. (sponza is way too big and clips, scale it down by selecting it in the inspector)
-note that currently only gltf files can be loaded, and embeded textures are not supported. (textures can be swapped in the editor).
+Note that currently only gltf files can be loaded, and embeded textures are not supported. (textures can be swapped in the editor).
 Serializing and deserializing scenes are not implemented yet.
 
 Currently only pointlights are implemented, (no shadows at all)
+Crashes will most likely happen!
 
 
-[test project]: https://github.com/varigeri92/GenesisEngine_TestProject
+[Test Project]: https://github.com/varigeri92/GenesisEngine_TestProject
