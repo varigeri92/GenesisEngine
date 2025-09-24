@@ -16,4 +16,15 @@ How to build:
     * There is no fork For Dear ImGui, go to imgui.h Include the "API.h" and define IMGUI_API to GNS_API
 7. After Building the project The Assimp output dll (assimp-vc143-mt.dll) should be copied manually to the output directory bin/debug.
 
+![alt text](https://github.com/varigeri92/GenesisEngine/blob/main/git_images/Screenshot%202025-09-24%20132411.png "screenshot")
+
+right click to look around in the scene WASD to fly around.
+
+To load object Drag and drop them from the content browser. (sponza is way too big and clips, scale it down by selecting it in the inspector)
+note that currently only gltf files can be loaded, and embeded textures are not supported. (textures can be swapped in the editor).
+Serializing and deserializing scenes are not implemented yet.
+
+Currently only pointlights are implemented, (no shadows at all)
+
+
 [test project]: https://github.com/varigeri92/GenesisEngine_TestProject
