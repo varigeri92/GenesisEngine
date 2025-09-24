@@ -3,17 +3,17 @@ VULKAN_SDK = os.getenv("VULKAN_SDK")
 VulkanLibDir = VULKAN_SDK .. "/Lib"
 VulkanIncludeDir =  VULKAN_SDK .. "/Include"
 SDL_DIR = VULKAN_SDK .. "/Include/SDL2"
-PROJECT_DIR = "D:\\Project_Genesis\\TestProjects\\DevTest_Project"
+PROJECT_DIR = "D:\\Project_Genesis\\GenesisEngine_TestProject"
 RESOURCE_DIR = "D:\\Project_Genesis\\GenesisEngine\\Resources"
 
---os.execute("cmake submodules/assimp/CMakeLists.txt -B submodules/assimp/build");
+--cmake submodules/assimp/CMakeLists.txt -B submodules/assimp/build
 
 workspace "GenesisEngine"
     language "C++"
     cppdialect "C++20"
     configurations { "Debug", "Release", "Profile", "Dist" }
     platforms { "Win64" }
-    startproject "Sandbox"
+    startproject "Editor"
     toolset "msc"
     debugenvs { "TRACEDESIGNTIME = true" }
     filter { "platforms:Win64" }

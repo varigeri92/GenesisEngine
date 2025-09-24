@@ -5,4 +5,3 @@
 #else
 #define GNS_API __declspec(dllimport)
 #endif
-
