@@ -125,26 +125,6 @@ void config_style() {
 	style.FramePadding = ImVec2(4.0f, 3.0f);
 	style.ItemSpacing = ImVec2(6.0f, 4.0f);
 	style.ItemInnerSpacing = ImVec2(4.0f, 4.0f);
-
-	/*
-	// Font Scaling
-	ImGuiIO& io = ImGui::GetIO();
-	io.FontGlobalScale = 0.95f;
-
-	io.Fonts->AddFontDefault();
-	float baseFontSize = 18.0f;
-	float iconFontSize = baseFontSize * 2.0f / 3.0f;
-
-	// merge in icons from Font Awesome
-	static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
-	ImFontConfig icons_config;
-	icons_config.MergeMode = true;
-	icons_config.PixelSnapH = true;
-	icons_config.GlyphMinAdvanceX = iconFontSize;
-	io.Fonts->AddFontFromFileTTF(
-		(std::string(RESOURCE_DIR) + "/fonts/" + FONT_ICON_FILE_NAME_FA).c_str(), iconFontSize,
-		&icons_config, icons_ranges);
-	*/
 }
 
 void SetProjectArguments(std::string command, std::string value)
@@ -167,7 +147,6 @@ void SetProjectArguments(std::string command, std::string value)
 	}
 }
 
-
 void SetArguments(int argc, char* argv[])
 {
 	if (argc > 1)
@@ -189,13 +168,6 @@ void SetArguments(int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
-	/*
-	PathManager::ProjectPath = R"(D:\Project_Genesis\TestProjects\DevTest_Project\)";
-	PathManager::AssetDatabasePath = R"(D:\Project_Genesis\TestProjects\DevTest_Project\.AssetDatabase\)";
-	PathManager::AssetsPath = R"(D:\Project_Genesis\TestProjects\DevTest_Project\Assets\)";
-	PathManager::ResourcesPath = R"(D:\Project_Genesis\GenesisEngine\Resources\)";
-	 */
-
 	SetArguments(argc, argv);
 	gns::editor::assets::AssetLibrary::ScanAssetLibrary();
 
@@ -214,48 +186,6 @@ int main(int argc, char* argv[])
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::SceneView>();
 
 	});
-	/*
-	gns::RenderSystem* renderSystem = gns::SystemsManager::GetSystem<gns::RenderSystem>();
-	gns::assetLibrary::LoadAsset(R"(D:\_ASSETS\glTF-Sample-Models-main\2.0\Sponza\glTF\sponza.glb)");
-	const auto view = gns::SystemsManager::GetRegistry()
-		.view<gns::entity::Transform, gns::entity::MeshComponent, gns::entity::EntityComponent>();
-	 */
-
-	/*
-	const std::string v_shader_path = R"(D:\Project_Genesis\GenesisEngine\Resources\Shaders\colored_triangle_mesh.vert)";
-	const std::string f_shader_path = R"(D:\Project_Genesis\GenesisEngine\Resources\Shaders\tex_image.frag)";
-	rendering::Shader* shader = CreateShader(v_shader_path, f_shader_path);
-	rendering::Material* shared_material = CreateMaterial(shader, "shared_material");
-	rendering::Texture* albedoTexture = m_renderer->GetDefaultTexture("white");// CreateTexture(R"(D:\Project_Genesis\TestProjects\DevTest_Project\Assets\Textures\Default_albedo.jpg)");
-	rendering::Texture* normalTexture = m_renderer->GetDefaultTexture("blue");//CreateTexture(R"(D:\Project_Genesis\TestProjects\DevTest_Project\Assets\Textures\Default_normal.jpg)");
-	rendering::Texture* metallicRoughnessTexture = m_renderer->GetDefaultTexture("white");//CreateTexture(R"(D:\Project_Genesis\TestProjects\DevTest_Project\Assets\Textures\Default_metalRoughness.jpg)");
-	rendering::Texture* aoTexture = m_renderer->GetDefaultTexture("white");//CreateTexture(R"(D:\Project_Genesis\TestProjects\DevTest_Project\Assets\Textures\Default_AO.jpg)");
-	rendering::Texture* emissionTexture = m_renderer->GetDefaultTexture("white");//CreateTexture(R"(D:\Project_Genesis\TestProjects\DevTest_Project\Assets\Textures\Default_emissive.jpg)");
-	*/
-	/* 
-	for (auto [entt, transform, meshComponent, entity] : view.each())
-	{
-		gns::guid _guid = meshComponent.mesh_ref;
-		renderSystem->UploadMesh(gns::Object::Get<gns::rendering::Mesh>(_guid));
-	}
-	*/
-	/*
-	 
-	constexpr size_t LIGHT_COUNT = 3;
-	for (size_t i = 0; i < LIGHT_COUNT; i++)
-	{
-		gns::Entity pointLightEntity = gns::Entity::CreateEntity("Point Light_" + std::to_string(i));
-		auto& pointlight_comp = pointLightEntity.AddComponet<gns::rendering::PointLightComponent>();
-		pointlight_comp.intensity = 1.f;
-		pointlight_comp.radius = 10.f;
-		auto& colorComponent = pointLightEntity.AddComponet<gns::rendering::ColorComponent>();
-		colorComponent.color.r = 1;
-		colorComponent.color.g = 1;
-		colorComponent.color.b = 1;
-		colorComponent.color.a = 1;
-		pointLightEntity.GetComponent<gns::entity::Transform>().position = { 0,1.25f,0 };
-	}
-	 */
 	engine.Run();
 	engine.ShutDown();
 }

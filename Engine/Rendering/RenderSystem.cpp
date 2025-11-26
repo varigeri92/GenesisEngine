@@ -166,7 +166,7 @@ void gns::RenderSystem::InitSystem()
 
     if (m_offScreenRenderTargetTexture == nullptr)
     {
-        LOG_INFO("Could not find texture!");
+        LOG_ERROR("Could not find texture!");
     }
 }
 bool keep_aspect = true;
@@ -176,20 +176,6 @@ void gns::RenderSystem::UpdateSystem(float deltaTime)
 {
     BeginGuiFrame();
     gns::GuiWindowDrawer::DrawWindows();
-
-    ImGui::Begin("Test stuff");
-    ImGui::DragFloat("r_fov", &m_camera->m_fov);
-    ImGui::DragFloat("near", &m_camera->m_near);
-    ImGui::DragFloat("far", &m_camera->m_far);
-    ImGui::DragFloat3("r_position:", reinterpret_cast<float*>(&m_cameraTransform->position));
-    ImGui::DragFloat3("r_rotation:", reinterpret_cast<float*>(&m_cameraTransform->rotation));
-
-    ImGui::ColorEdit3("ambient", reinterpret_cast<float*>(&m_renderer->globalUniform.ambientColor));
-    ImGui::DragFloat("Ambient intensity", &m_renderer->globalUniform.ambientColor.w, 0.01f, 0.f, 2.f);
-    ImGui::DragFloat("Exposure", &m_renderer->globalUniform.exposure, 0.01f, 0.f, 2.f);
-    ImGui::DragFloat("Gamma", &m_renderer->globalUniform.gamma, 0.01f, 0.f, 2.f);
-
-    ImGui::End();
 
     ImGui::EndFrame();
     UpdateCamera();
@@ -205,17 +191,7 @@ void gns::RenderSystem::FixedUpdate(float fixedDeltaTime)
 void gns::RenderSystem::CleanupSystem()
 {
 	m_renderer->WaitForGPUIddle();
-
-    for (auto& it : Object::m_objectMap) {
-        if(it.second != nullptr)
-			it.second->Dispose();
-        else
-        {
-            LOG_WARNING("Object is already null!");
-        }
-    }
-
-    Object::m_objectMap.clear();
+    Object::ClearAll();
 }
 
 gns::RenderSystem::RenderSystem(Screen* screen)

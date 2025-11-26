@@ -35,8 +35,13 @@ namespace gns
 		{
 			if(m_objectMap.contains(_guid))
 			{
-				LOG_INFO("object map contains guid: " + std::to_string(_guid));
-				return dynamic_cast<T*>(m_objectMap[_guid]);
+				T* existing = dynamic_cast<T*>(m_objectMap[_guid]);
+				if (!existing) {
+					LOG_ERROR("GUID collision: " + std::to_string(_guid) +
+						" exists but is not of type " + typeid(T).name());
+					return nullptr;
+				}
+				return existing;
 			}
 			m_objectMap[_guid] = new T(std::forward<Args>(args)...);
 			m_objectMap[_guid]->m_guid = _guid;
@@ -46,18 +51,39 @@ namespace gns
 		template<typename T, typename = std::enable_if<std::is_base_of<Object, T>::value>::type, typename... Args>
 		static T* Get(guid guid)
 		{
-			return dynamic_cast<T*>(m_objectMap[guid]);
+			if (m_objectMap.contains(guid))
+				return dynamic_cast<T*>(m_objectMap[guid]);
+			else
+				return nullptr;
 		}
 
 		template<typename T, typename = std::enable_if<std::is_base_of<Object, T>::value>::type, typename... Args>
 		static T* Find(const std::string& name)
 		{
-			for (auto element : m_objectMap)
+			for (const auto& element : m_objectMap)
 			{
 				if (element.second->name == name)
 					return dynamic_cast<T*>(element.second);
 			}
 			return nullptr;
+		}
+
+
+		static void Destroy(guid id)
+		{
+			auto it = m_objectMap.find(id);
+			if (it == m_objectMap.end()) return;
+
+			Object* obj = it->second;
+			m_objectMap.erase(it);
+			delete obj;
+		}
+
+		static void ClearAll()
+		{
+			for (auto& it : m_objectMap)
+				delete it.second;
+			m_objectMap.clear();
 		}
 
 		virtual void Dispose();

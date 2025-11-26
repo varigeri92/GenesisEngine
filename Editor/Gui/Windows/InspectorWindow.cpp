@@ -94,7 +94,7 @@ std::vector<uint32_t> LoadShader(std::string path)
 
 void ReadShaderAttributes(gns::rendering::Shader* shader)
 {
-	std::vector<uint32_t> spirv = LoadShader(shader->fragmentShaderPath);
+	std::vector<uint32_t> spirv = LoadShader(PathManager::FromResourcesRelative(shader->fragmentShaderPath));
 	spirv_cross::Compiler comp(std::move(spirv));
 	spirv_cross::ShaderResources res = comp.get_shader_resources();
 	LOG_INFO("Shader Data of: " + shader->fragmentShaderPath);

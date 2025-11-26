@@ -14,5 +14,5 @@ gns::Object::Object(std::string name) : m_guid(0), name(name)
 
 void gns::Object::Dispose()
 {
-	delete(m_objectMap[m_guid]);
+	Object::Destroy(m_guid);
 }

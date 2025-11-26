@@ -104,6 +104,14 @@ ComponentDeserializer_Table
 			auto& component = entity.AddComponet<gns::rendering::ColorComponent>();
 			return static_cast<void*>(&component);
 		}
+	},
+	{static_cast<size_t>(entt::type_hash<gns::entity::MeshComponent>::value()),
+	[](gns::entityHandle entity_handle)
+		{
+			gns::Entity entity = {entity_handle};
+			auto& component = entity.AddComponet<gns::entity::MeshComponent>();
+			return static_cast<void*>(&component);
+		}
 	}
 };
 

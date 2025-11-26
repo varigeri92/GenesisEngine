@@ -21,6 +21,7 @@ bool gns::editor::assets::AssetLibrary::TryGetAsset(guid guid, AssetMetadata& ou
 
 void gns::editor::assets::AssetLibrary::ScanAssetLibrary()
 {
+	LOG_INFO("Project path: " + PathManager::ProjectPath);
 	LOG_INFO("Scanning assetLibrary ... ");
 	std::vector<std::string> mark_for_delete = {};
 	for (const auto& entry : fs::directory_iterator(PathManager::AssetDatabasePath))

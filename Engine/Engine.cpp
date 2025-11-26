@@ -64,6 +64,7 @@ namespace gns
 			if(fixedUpdateTime >= 1.f / FIXED_UPDATE_RATE)
 			{
 				SystemsManager::FixedUpdate(1.f /FIXED_UPDATE_RATE);
+				fixedUpdateTime = 0;
 			}
 			Time::EndFrameTime();
 		}
@@ -73,5 +74,6 @@ namespace gns
 	{
 		m_mainWindow->GetWindow()->CloseWindow();
 		SystemsManager::DisposeSystems();
+		delete(defaultScreen);
 	}
 }

@@ -101,6 +101,9 @@ void gns::editor::gui::SceneView::OnWindowDraw()
 						}
 					});
 				}
+			}else
+			{
+				LOG_INFO("Asset already imported!");
 			}
 		}
 		ImGui::EndDragDropTarget();
