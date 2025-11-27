@@ -53,7 +53,7 @@ void gns::Entity::AddChild(entityHandle handle)
 
 void gns::Entity::RemoveChild(entityHandle entity)
 {
-    size_t index = 0;
+    size_t index = -1;
     for (size_t i = 0; i<Children().size(); i++)
     {
 	    if(entity == Children()[i])
@@ -61,6 +61,11 @@ void gns::Entity::RemoveChild(entityHandle entity)
             index = i;
             break;
 	    }
+    }
+    if(index == -1)
+    {
+        LOG_WARNING("RemoveChild: Entity is not a child!");
+        return;
     }
     Children().erase(Children().begin()+index);
 }

@@ -41,6 +41,10 @@ namespace gns
 			return *this;
 		}
 
+		bool operator==(const Entity& other) const {
+			return entity_handle == other.entity_handle;
+		}
+
 		operator entityHandle() const
 		{
 			return entity_handle;
@@ -66,7 +70,7 @@ namespace gns
 		}
 
 		template<typename T>
-		bool TryGetComponent(T* component)
+		bool TryGetComponent(T*& component)
 		{
 			component = SystemsManager::GetRegistry().try_get<T>(entity_handle);
 			return component != nullptr;

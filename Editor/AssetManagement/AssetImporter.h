@@ -28,6 +28,6 @@ namespace gns::editor::assets
 		static assetLibrary::AssetType GetAssetType(const std::string& extension);
 
 	private:
-		static void ImportMesh(std::string file_path, MeshImportOptions options, guid guid);
+		static bool ImportMesh(std::string file_path, MeshImportOptions options, guid guid);
 	};
 }

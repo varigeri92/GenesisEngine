@@ -10,7 +10,7 @@
 #include "yaml-cpp/yaml.h"
 
 
-#define VERSION "0.0.0";
+#define VERSION "0.0.0"
 
 
 std::unordered_map<size_t, std::function<void(const std::string& name, char* componentData, size_t offset, YAML::Emitter& out)>>
@@ -44,7 +44,7 @@ FieldSerializerTable
 	},
 	{typeid(float).hash_code(),[](const std::string& name, char* componentData, size_t offset, YAML::Emitter& out)
 		{
-			bool f = *reinterpret_cast<float*>(componentData + offset);
+			float f = *reinterpret_cast<float*>(componentData + offset);
 			out << YAML::Key << name
 				<< YAML::Value << f;
 		}
@@ -59,10 +59,8 @@ FieldSerializerTable
 	{typeid(gns::color3).hash_code(),[](const std::string& name, char* componentData, size_t offset, YAML::Emitter& out)
 		{
 			glm::vec3 vec3 = *reinterpret_cast<glm::vec3*>(componentData + offset);
-			out << YAML::BeginMap
-			<< YAML::Key << name
-			<< YAML::Value << YAML::Flow << YAML::BeginSeq << vec3.x << vec3.y << vec3.z << YAML::EndSeq
-			<< YAML::EndMap;
+			out << YAML::Key << name
+				<< YAML::Value << YAML::Flow << YAML::BeginSeq << vec3.x << vec3.y << vec3.z << YAML::EndSeq;
 		}
 	},
 };

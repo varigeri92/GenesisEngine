@@ -53,7 +53,15 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
     if(IsImported(relative_path))
     {
         if (reImport)
-            guid = YAML::LoadFile(PathManager::FromAssetsRelative(relative_path + ".meta"))["asset_guid"].as<size_t>();
+	        try
+	        {
+				guid = YAML::LoadFile(
+                    PathManager::FromAssetsRelative(relative_path + ".meta"))["asset_guid"].as<size_t>();
+	        }
+	        catch (const std::exception& e)
+	        {
+                LOG_ERROR("Failed to read YAML '{}': {}", path, e.what());
+	        }
         else
             return true;
     }
@@ -91,11 +99,12 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
 	    outfile << database_yaml.c_str() << std::endl;
 	    outfile.close();
     }
+    bool import_result = false;
     switch (AssetLibrary::assetDatabase[guid].assetType) {
     case assetLibrary::AssetType::None:
 	    break;
     case assetLibrary::AssetType::Mesh:
-        ImportMesh(relative_path, {}, guid);
+        import_result = ImportMesh(relative_path, {}, guid);
 	    break;
     case assetLibrary::AssetType::Texture:
 	    break;
@@ -110,7 +119,7 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
     default: ;
     }
 
-    return true;
+    return import_result;
 }
 
 bool gns::editor::assets::AssetImporter::IsImported(const std::string& filePath)
@@ -199,96 +208,88 @@ gns::assetLibrary::AssetType gns::editor::assets::AssetImporter::GetAssetType(co
 	return assetLibrary::AssetType::None;
 }
 
-void gns::editor::assets::AssetImporter::ImportMesh(std::string file_path, MeshImportOptions options, guid guid)
+bool gns::editor::assets::AssetImporter::ImportMesh(std::string file_path, MeshImportOptions options, guid guid)
 {
     LOG_INFO("Importing mesh: '" + file_path + "' ...");
     Assimp::Importer importer;
-
-    const aiScene* scene = importer.ReadFile(PathManager::FromAssetsRelative(file_path),
-        aiProcess_CalcTangentSpace |
-        aiProcess_Triangulate |
-        aiProcess_JoinIdenticalVertices |
-        aiProcess_SortByPType);
-
-    if (nullptr == scene) {
-        LOG_ERROR(importer.GetErrorString());
-        return;
-    }
-
-    if (!scene->HasMeshes())
-        return;
-
-    if (scene->HasMaterials())
+    try
     {
-        std::vector<rendering::Material*> materials;
-        const std::string v_shader_path = R"(Shaders\colored_triangle_mesh.vert)";
-        const std::string f_shader_path = R"(Shaders\tex_image.frag)";
+	    const aiScene* scene = importer.ReadFile(PathManager::FromAssetsRelative(file_path),
+	        aiProcess_CalcTangentSpace |
+	        aiProcess_Triangulate |
+	        aiProcess_JoinIdenticalVertices |
+	        aiProcess_SortByPType);
 
-        for (size_t t = 0; t < scene->mNumTextures; t++)
-        {
-            LOG_INFO(scene->mTextures[t]->mFilename.C_Str());
-        }
+	    if (nullptr == scene) {
+	        LOG_ERROR(importer.GetErrorString());
+	        return false;
+	    }
 
-        for (size_t m = 0; m < scene->mNumMaterials; m++)
-        {
-            aiMaterial* mat = scene->mMaterials[m];
-            /*
-             
-            rendering::Material* material = renderSystem->CreateMaterial(shader, mat->GetName().C_Str());
-            material->uniformData.metallic_roughness_AO = { 0,1,1,0 };
-            renderSystem->ResetMaterialTextures(material);
-            materials.push_back(material);
+	    if (!scene->HasMeshes())
+	        return false;
 
-            LoadTextures(mat, aiTextureType_NORMALS);
-            LoadTextures(mat, aiTextureType_BASE_COLOR);
-            LoadTextures(mat, aiTextureType_EMISSIVE);
-            LoadTextures(mat, aiTextureType_GLTF_METALLIC_ROUGHNESS);
-            LoadTextures(mat, aiTextureType_METALNESS);
-            LoadTextures(mat, aiTextureType_DIFFUSE_ROUGHNESS);
-            LoadTextures(mat, aiTextureType_SPECULAR);
-            */
-        }
+	    if (scene->HasMaterials())
+	    {
+	        std::vector<rendering::Material*> materials;
+	        const std::string v_shader_path = R"(Shaders\colored_triangle_mesh.vert)";
+	        const std::string f_shader_path = R"(Shaders\tex_image.frag)";
+
+	        for (size_t t = 0; t < scene->mNumTextures; t++)
+	        {
+	            LOG_INFO(scene->mTextures[t]->mFilename.C_Str());
+	        }
+
+	        for (size_t m = 0; m < scene->mNumMaterials; m++)
+	        {
+	            aiMaterial* mat = scene->mMaterials[m];
+	        }
+	    }
+
+
+	    std::string assetname = fileUtils::GetFileNameFromPath(file_path);
+	    MeshAsset meshAsset{guid, assetname , file_path, {}};
+	    std::vector<gns::guid> materialGuids = {};
+	    if (scene->HasMaterials() && options.import_materials)
+	    {
+	        for (size_t m = 0; m < scene->mNumMaterials; m++)
+	        {
+	            aiMaterial* mat = scene->mMaterials[m];
+	            materialGuids.emplace_back(Guid::GetNewGuid());
+	        }
+	    }
+
+	    for (size_t m = 0; m < scene->mNumMeshes; m++)
+	    {
+	        const aiMesh* mesh = scene->mMeshes[m];
+	        meshAsset.sub_meshes.emplace_back(m, Guid::GetNewGuid());
+	    }
+	    YAML::Emitter out;
+	    out << YAML::BeginMap;
+		out << "asset_guid" << guid;
+	    out << "asset_name" << assetname;
+	    out << "file_path" << file_path;
+	    out << "sub_meshes" << YAML::BeginSeq;
+	    for (AssetSubmesh subMesh : meshAsset.sub_meshes)
+	    {
+	        out << YAML::BeginMap;
+	        out << "mesh_index" << subMesh.mesh_index;
+	        out << "mesh_guid" << subMesh.mesh_guid;
+	        out << YAML::EndMap;
+	    }
+	    out << YAML::EndSeq << YAML::EndMap;
+
+
+	    std::string DatabaseFilePath = PathManager::FromAssetsRelative(file_path + ".gnsMesh");
+	    {
+	        std::ofstream outfile(DatabaseFilePath);
+	        outfile << out.c_str() << std::endl;
+	        outfile.close();
+	    }
     }
-
-
-    std::string assetname = fileUtils::GetFileNameFromPath(file_path);
-    MeshAsset meshAsset{guid, assetname , file_path, {}};
-    std::vector<gns::guid> materialGuids = {};
-    if (scene->HasMaterials() && options.import_materials)
+    catch (const std::exception& e)
     {
-        for (size_t m = 0; m < scene->mNumMaterials; m++)
-        {
-            aiMaterial* mat = scene->mMaterials[m];
-            materialGuids.emplace_back(Guid::GetNewGuid());
-        }
-    }
-
-    for (size_t m = 0; m < scene->mNumMeshes; m++)
-    {
-        const aiMesh* mesh = scene->mMeshes[m];
-        meshAsset.sub_meshes.emplace_back(m, Guid::GetNewGuid());
-    }
-    YAML::Emitter out;
-    out << YAML::BeginMap;
-	out << "asset_guid" << guid;
-    out << "asset_name" << assetname;
-    out << "file_path" << file_path;
-    out << "sub_meshes" << YAML::BeginSeq;
-    for (AssetSubmesh subMesh : meshAsset.sub_meshes)
-    {
-        out << YAML::BeginMap;
-        out << "mesh_index" << subMesh.mesh_index;
-        out << "mesh_guid" << subMesh.mesh_guid;
-        out << YAML::EndMap;
-    }
-    out << YAML::EndSeq << YAML::EndMap;
-
-
-    std::string DatabaseFilePath = PathManager::FromAssetsRelative(file_path + ".gnsMesh");
-    {
-        std::ofstream outfile(DatabaseFilePath);
-        outfile << out.c_str() << std::endl;
-        outfile.close();
+        LOG_ERROR("Failed to inport Mesh '{}': {}", path, e.what());
+        return false;
     }
     
 }

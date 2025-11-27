@@ -77,7 +77,9 @@ namespace gns
 			int32_t index = GetIndexOfType(typehash);
 			if (index > -1)
 			{
+				auto sys = Systems[index];
 				Systems.erase(Systems.begin() + index);
+				delete sys;
 			}
 		}
 
@@ -86,6 +88,9 @@ namespace gns
 		{
 			auto typehash = typeid(T).hash_code();
 			int32_t index = GetIndexOfType(typehash);
+			if (index == -1)
+				return nullptr;
+
 			return dynamic_cast<T*>(Systems[index]);
 		}
 	};

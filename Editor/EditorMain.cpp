@@ -152,7 +152,10 @@ void SetArguments(int argc, char* argv[])
 	if (argc > 1)
 	{
 		for (int i = 1; i < argc; i += 2) {
-			SetProjectArguments(argv[i], argv[i + 1]);
+			if (i + 1 < argc)
+				SetProjectArguments(argv[i], argv[i + 1]);
+			else
+				LOG_ERROR("Missing argument value for: {}", argv[i]);
 		}
 	}
 	else

@@ -30,6 +30,7 @@ void gns::SystemsManager::DisposeSystems()
 		Systems[i]->CleanupSystem();
 		delete(Systems[i]);
 	}
+	Systems.clear();
 }
 
 entt::registry& gns::SystemsManager::GetRegistry()

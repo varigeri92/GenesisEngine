@@ -45,65 +45,61 @@ void gns::editor::scene::EditorCamera::SetViewYXZ(glm::vec3 position, glm::vec3 
 
 void gns::editor::scene::EditorCamera::UpdateSystem(const float deltaTime)
 {
-	m_camera.m_aspect = m_screen->aspectRatio;
+    m_camera.m_aspect = m_screen->aspectRatio;
 
-	if (gns::InputBackend::GetMouseButton(3))
-	{
-		float speed = (deltaTime * m_cameraSpeed);
-		float mouse_sensitivity = (deltaTime * 1.f);
-		m_transform.rotation.x += -gns::InputBackend::GetMouseVelocity().y * mouse_sensitivity;
-		m_transform.rotation.y += -gns::InputBackend::GetMouseVelocity().x * mouse_sensitivity;
+    if (gns::InputBackend::GetMouseButton(3))
+    {
+        const float speed = m_cameraSpeed * deltaTime;
+        const float mouseSensitivity = 0.0025f; // feel free to tweak
 
-		glm::quat rotation = { m_transform.rotation };
-		float pitch = (m_transform.rotation.x); // Rotation around the X-axis
-		float yaw = (m_transform.rotation.y);   // Rotation around the Y-axis
-		float roll = (m_transform.rotation.z); // Rotation around the Z-axis
+        // --- ROTATION ---
+        yaw += -gns::InputBackend::GetMouseVelocity().x * mouseSensitivity;
+        pitch += -gns::InputBackend::GetMouseVelocity().y * mouseSensitivity;
 
-		glm::vec3 camFront;
-		camFront.x = cos(pitch) * sin(yaw);
-		camFront.y = sin(pitch);
-		camFront.z = cos(pitch) * cos(yaw);
-		camFront = glm::normalize(camFront);
-		camFront.y *= -1;
-		camFront *= -1;
+        // Clamp pitch (avoid flipping upside-down)
+        pitch = glm::clamp(pitch, -1.5f, 1.5f);
 
-		glm::vec3 worldUp = glm::vec3(0.0f, -1.0f, 0.0f);
-		glm::vec3 camRight = -glm::normalize(glm::cross(worldUp, camFront));
-		glm::vec3 camUp = glm::normalize(glm::cross(camFront, camRight));
-		//fwd:
-		if (gns::InputBackend::GetKey(SDLK_w)) {
-			m_transform.position += camFront * speed;
-		}
-		//back:
-		if (gns::InputBackend::GetKey(SDLK_s)) {
-			m_transform.position -= camFront * speed;
-		}
-		//left:
-		if (gns::InputBackend::GetKey(SDLK_a)) {
-			m_transform.position += camRight * speed;
-		}
-		//right:
-		if (gns::InputBackend::GetKey(SDLK_d)) {
-			m_transform.position -= camRight * speed;
-		}
+        m_transform.rotation = { pitch, yaw, 0.0f };
 
-		//down:
-		if (gns::InputBackend::GetKey(SDLK_q)) {
-			m_transform.position -= camUp * speed;
-		}
-		//up:
-		if (gns::InputBackend::GetKey(SDLK_e)) {
-			m_transform.position += camUp * speed;
-		}
+        // --- DIRECTION VECTORS ---
+        glm::vec3 forward = {
+            cosf(pitch) * sinf(yaw),
+            sinf(pitch),
+            cosf(pitch) * cosf(yaw)
+        };
+        forward = glm::normalize(forward);
 
+        glm::vec3 worldUp = { 0.0f, 1.0f, 0.0f };
+        glm::vec3 right = glm::normalize(glm::cross(forward, worldUp));
+        glm::vec3 up = glm::normalize(glm::cross(right, forward));
 
-	}
-	//m_camera.view = m_transform.matrix;
-	m_camera.m_projection = glm::perspective(
-		glm::radians(m_camera.m_fov), (m_camera.m_aspect), m_camera.m_near, m_camera.m_far);
-	m_camera.m_projection[1][1] *= -1;
-	SetViewYXZ(m_transform.position, m_transform.rotation);
-	m_camera.m_cameraMatrix = m_camera.m_projection * (m_camera.m_view);
+        // --- MOVEMENT ---
+        if (gns::InputBackend::GetKey(SDLK_w)) m_transform.position += forward * speed;
+        if (gns::InputBackend::GetKey(SDLK_s)) m_transform.position -= forward * speed;
+        if (gns::InputBackend::GetKey(SDLK_a)) m_transform.position -= right * speed;
+        if (gns::InputBackend::GetKey(SDLK_d)) m_transform.position += right * speed;
+        if (gns::InputBackend::GetKey(SDLK_e)) m_transform.position += up * speed;
+        if (gns::InputBackend::GetKey(SDLK_q)) m_transform.position -= up * speed;
+
+        // --- VIEW MATRIX ---
+        m_camera.m_view = glm::lookAt(
+            m_transform.position,
+            m_transform.position + forward,
+            up
+        );
+    }
+
+    // Projection (Vulkan-style)
+    m_camera.m_projection = glm::perspective(
+        glm::radians(m_camera.m_fov),
+        m_camera.m_aspect,
+        m_camera.m_near,
+        m_camera.m_far
+    );
+    m_camera.m_projection[1][1] *= -1;
+
+    // Final camera matrix
+    m_camera.m_cameraMatrix = m_camera.m_projection * m_camera.m_view;
 }
 
 void gns::editor::scene::EditorCamera::FixedUpdate(const float fixedDeltaTime)

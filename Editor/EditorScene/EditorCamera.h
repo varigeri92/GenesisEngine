@@ -21,5 +21,8 @@ namespace gns::editor::scene
 		entity::Transform m_transform;
 		float m_cameraSpeed;
 		Screen* m_screen;
+	private:
+		float pitch = 0.0f;
+		float yaw = 0.0f;
 	};
 }
