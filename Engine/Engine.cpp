@@ -16,7 +16,6 @@
 #include "Utils/PathHelper.h"
 
 #define FIXED_UPDATE_RATE 30.f
-
 namespace gns
 {
 	constexpr size_t RESERVE_OBJECT_COUNT = 500;

@@ -4,8 +4,4 @@
 
 int main()
 {
-	gns::Engine engine;
-	engine.InitEngine(PROJECT_NAME);
-	engine.Run();
-	engine.ShutDown();
 }

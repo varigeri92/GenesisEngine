@@ -5,6 +5,7 @@
 *.sln
 bin
 bin-int
+obj
 .vs
 
 
