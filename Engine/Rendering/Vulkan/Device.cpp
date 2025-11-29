@@ -137,12 +137,7 @@ VkDescriptorSet gns::rendering::DescriptorAllocator::Allocate(VkDevice device, V
     return ds;
 }
 #pragma endregion
- 
-VkDevice gns::rendering::Device::sDevice = {};
-VmaAllocator gns::rendering::Device::sAllocator = {};
-VkQueue gns::rendering::Device::sGraphicsQueue = {};
 gns::rendering::ImmeduateSubmitStruct gns::rendering::Device::sImmediateSubmitStruct = {};
-
 // Device Code:
 gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(2), m_imageIndex(0)
 {
@@ -151,8 +146,12 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
     InitVulkan();
     CreateSwapchain();
     offscreen_Texture = Object::Create<Texture>("offscreen_texture");
-    offscreen_Texture->vulkanImage = new VulkanImage();
-    offscreen_Texture->vulkanImage->CreateImage(m_renderTargetImage.imageExtent, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+    offscreen_Texture->vulkanImage = VulkanImage::Create(
+        *this,
+        m_renderTargetImage.imageExtent, 
+        VK_FORMAT_R8G8B8A8_UNORM, 
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+
     InitCommands();
     InitSyncStructures();
     InitDescriptors();
@@ -162,30 +161,28 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
 
     constexpr size_t DEFAULT_STORAGE_BUFFER_OBJECT_COUNT = 500;
 
-    m_objectStorageBuffer = VulkanBuffer::CreateBuffer(sizeof(ObjectDrawData) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
+    m_objectStorageBuffer = VulkanBuffer::Create(m_allocator, sizeof(ObjectDrawData) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-    m_pointLightStorageBuffer = VulkanBuffer::CreateBuffer(sizeof(PointLight) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
+    m_pointLightStorageBuffer = VulkanBuffer::Create(m_allocator, sizeof(PointLight) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-    m_spotLightStorageBuffer = VulkanBuffer::CreateBuffer(sizeof(SpotLight) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
+    m_spotLightStorageBuffer = VulkanBuffer::Create(m_allocator, sizeof(SpotLight) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-	CreateImageDataFromScratch();
 }
 
 
 gns::rendering::Device::~Device()
 {
-    vkDeviceWaitIdle(sDevice);
-    vkDestroyDescriptorSetLayout(sDevice, m_perFrameDescriptorLayout, nullptr);
+    vkDeviceWaitIdle(m_device);
+    vkDestroyDescriptorSetLayout(m_device, m_perFrameDescriptorLayout, nullptr);
 
     for (size_t i = 0; i < m_imageCount; i++)
     {
-        vkDestroyCommandPool(sDevice, m_frames[i].commandPool, nullptr);
-        vkDestroyFence(sDevice, m_frames[i].renderFence, nullptr);
-        vkDestroySemaphore(sDevice, m_frames[i].renderSemaphore, nullptr);
-        vkDestroySemaphore(sDevice, m_frames[i].presentSemaphore, nullptr);
+        vkDestroyCommandPool(m_device, m_frames[i].commandPool, nullptr);
+        vkDestroyFence(m_device, m_frames[i].renderFence, nullptr);
+        vkDestroySemaphore(m_device, m_frames[i].renderSemaphore, nullptr);
+        vkDestroySemaphore(m_device, m_frames[i].presentSemaphore, nullptr);
         m_frames[i].deletionQueue.Flush();
     }
 
@@ -197,33 +194,6 @@ gns::rendering::Device::~Device()
     vkb::destroy_device(m_vkb_device);
 }
 
-
-void gns::rendering::Device::CreateImageDataFromScratch()
-{
-    //3 default textures, white, grey, black. 1 pixel each
-    uint32_t white = glm::packUnorm4x8(glm::vec4(1, 1, 1, 1));
-    _whiteImage.CreateImage((void*)&white, VkExtent3D{ 1, 1, 1 }, VK_FORMAT_R8G8B8A8_UNORM,
-        VK_IMAGE_USAGE_SAMPLED_BIT);
-
-    uint32_t blue = glm::packUnorm4x8(glm::vec4(0.5, 0.5, 1, 1));
-    _blueImage.CreateImage((void*)&blue, VkExtent3D{ 1, 1, 1 }, VK_FORMAT_R8G8B8A8_UNORM,
-        VK_IMAGE_USAGE_SAMPLED_BIT);
-
-    uint32_t black = glm::packUnorm4x8(glm::vec4(0, 0, 0, 0));
-    _blackImage.CreateImage((void*)&black, VkExtent3D{ 1, 1, 1 }, VK_FORMAT_R8G8B8A8_UNORM,
-        VK_IMAGE_USAGE_SAMPLED_BIT);
-    
-    //checkerboard image
-    constexpr size_t checkerboardSize = 64;
-    uint32_t magenta = glm::packUnorm4x8(glm::vec4(1, 0, 1, 1));
-    std::array<uint32_t, checkerboardSize * checkerboardSize > pixels;
-	for (int x = 0; x < checkerboardSize; x++) {
-        for (int y = 0; y < checkerboardSize; y++) {
-            pixels[y * checkerboardSize + x] = ((x % 2) ^ (y % 2)) ? magenta : black;
-        }
-    }
-
-}
 #pragma region Device_Initalization_Functions
 
 void gns::rendering::Device::InitPipelines()
@@ -246,17 +216,17 @@ void gns::rendering::Device::InitBackgroundPipelines()
     computeLayout.pPushConstantRanges = &pushConstant;
     computeLayout.pushConstantRangeCount = 1;
 
-    _VK_CHECK(vkCreatePipelineLayout(sDevice, &computeLayout, nullptr, &m_gradientPipelineLayout),"Failed To create Pipeline Layout");
+    _VK_CHECK(vkCreatePipelineLayout(m_device, &computeLayout, nullptr, &m_gradientPipelineLayout),"Failed To create Pipeline Layout");
 
     const std::string gradient_ShaderPath = PathHelper::FromResourcesRelative(R"(Shaders\gradient_color.comp.spv)");
     VkShaderModule gradientShader;
-    if (!utils::LoadShaderModule(gradient_ShaderPath.c_str(), sDevice, &gradientShader)) {
+    if (!utils::LoadShaderModule(gradient_ShaderPath.c_str(), m_device, &gradientShader)) {
         LOG_ERROR("Failed To load Shader: " + gradient_ShaderPath);
     }
 
     const std::string sky_ShaderPath = PathHelper::FromResourcesRelative("R(Shaders\sky.comp.spv)");
     VkShaderModule skyShader;
-    if (!utils::LoadShaderModule(gradient_ShaderPath.c_str(), sDevice, &skyShader)) {
+    if (!utils::LoadShaderModule(gradient_ShaderPath.c_str(), m_device, &skyShader)) {
         LOG_ERROR("Failed To load Shader: " + sky_ShaderPath);
     }
 
@@ -282,7 +252,7 @@ void gns::rendering::Device::InitBackgroundPipelines()
     gradient.data.data1 = glm::vec4(0.588f, 0.964f, 1, 1);
     gradient.data.data2 = glm::vec4(0.436f, 0.436f, 0.436f, 1);
 
-    _VK_CHECK(vkCreateComputePipelines(sDevice, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &gradient.pipeline), 
+    _VK_CHECK(vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &gradient.pipeline), 
         "Failed to create Compute Pipeline.");
 
     computePipelineCreateInfo.stage.module = skyShader;
@@ -295,26 +265,27 @@ void gns::rendering::Device::InitBackgroundPipelines()
     sky.data.data1 = glm::vec4(0.1, 0.2, 0.4, 1);
     sky.data.data1 = glm::vec4(0, 0, 0, 1);
 
-    _VK_CHECK(vkCreateComputePipelines(sDevice, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &sky.pipeline),
+    _VK_CHECK(vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &sky.pipeline),
         "Failed to create Compute Pipeline");
 
     backgroundEffects.push_back(gradient);
     backgroundEffects.push_back(sky);
 
 
-    vkDestroyShaderModule(sDevice, gradientShader, nullptr);
-    vkDestroyShaderModule(sDevice, skyShader, nullptr);
+    vkDestroyShaderModule(m_device, gradientShader, nullptr);
+    vkDestroyShaderModule(m_device, skyShader, nullptr);
 
     m_deletionQueue.Push([&]() {
-        vkDestroyPipelineLayout(sDevice, m_gradientPipelineLayout, nullptr);
-        vkDestroyPipeline(sDevice, backgroundEffects[0].pipeline, nullptr);
-        vkDestroyPipeline(sDevice, backgroundEffects[1].pipeline, nullptr);
+        vkDestroyPipelineLayout(m_device, m_gradientPipelineLayout, nullptr);
+        vkDestroyPipeline(m_device, backgroundEffects[0].pipeline, nullptr);
+        vkDestroyPipeline(m_device, backgroundEffects[1].pipeline, nullptr);
         });
 }
 
 void gns::rendering::Device::CreatePipeline(Shader& shader)
 {
     LOG_INFO("CreatingPipeline for Shader:" + std::to_string(shader.m_guid));
+    shader.shader.device = m_device;
     VkPushConstantRange bufferRange{};
     bufferRange.offset = 0;
     bufferRange.size = sizeof(PushConstants);
@@ -328,7 +299,7 @@ void gns::rendering::Device::CreatePipeline(Shader& shader)
         builder.AddBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         builder.AddBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         builder.AddBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        shader.shader.m_descriptorSetLayout = builder.Build(sDevice, VK_SHADER_STAGE_FRAGMENT_BIT);
+        shader.shader.m_descriptorSetLayout = builder.Build(m_device, VK_SHADER_STAGE_FRAGMENT_BIT);
     }
 
     VkDescriptorSetLayout layouts[] = { shader.shader.m_descriptorSetLayout, m_perFrameDescriptorLayout };
@@ -339,7 +310,7 @@ void gns::rendering::Device::CreatePipeline(Shader& shader)
     pipeline_layout_info.pSetLayouts = layouts;
     pipeline_layout_info.setLayoutCount = 2;
 
-    _VK_CHECK(vkCreatePipelineLayout(sDevice, &pipeline_layout_info, nullptr, &shader.shader.m_pipelineLayout),
+    _VK_CHECK(vkCreatePipelineLayout(m_device, &pipeline_layout_info, nullptr, &shader.shader.m_pipelineLayout),
         "Failed to crete pipeline Layout.");
     {
         PipelineBuilder pipelineBuilder(this);
@@ -353,7 +324,7 @@ void gns::rendering::Device::CreatePipeline(Shader& shader)
         pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_LESS_OR_EQUAL);
         pipelineBuilder.SetColorAttachmentFormat(m_renderTargetImage.imageFormat);
         pipelineBuilder.SetDepthFormat(m_depthImage.imageFormat);
-        shader.shader.m_pipeline = pipelineBuilder.BuildPipeline(sDevice);
+        shader.shader.m_pipeline = pipelineBuilder.BuildPipeline(m_device);
     }
 }
 
@@ -418,7 +389,7 @@ bool gns::rendering::Device::InitVulkan()
         return false;
     }
     m_physicalDevice = phys_ret.value();
-    LOG_INFO("PhysDevice Selected!");
+    LOG_INFO("Phym_device Selected!");
     vkb::DeviceBuilder device_builder{ phys_ret.value() };
 
     auto dev_ret = device_builder.build();
@@ -429,7 +400,7 @@ bool gns::rendering::Device::InitVulkan()
     m_vkb_device = dev_ret.value();
 
     // Get the VkDevice handle used in the rest of a vulkan application
-    sDevice = dev_ret.value().device;
+    m_device = dev_ret.value().device;
     LOG_INFO("LogicalDevice Created!");
     // Get the graphics queue with a helper function
     auto graphics_queue_ret = m_vkb_device.get_queue(vkb::QueueType::graphics);
@@ -437,7 +408,7 @@ bool gns::rendering::Device::InitVulkan()
         LOG_ERROR("Failed to get graphics queue. Error: " + graphics_queue_ret.error().message());
         return false;
     }
-    sGraphicsQueue = graphics_queue_ret.value();
+    m_graphicsQueue = graphics_queue_ret.value();
     m_graphicsFamilyIndex = m_vkb_device.get_queue_index(vkb::QueueType::graphics).value();
 
     auto transfer_queue_ret = m_vkb_device.get_queue(vkb::QueueType::transfer);
@@ -468,18 +439,18 @@ bool gns::rendering::Device::InitVulkan()
 
     VmaAllocatorCreateInfo allocatorCreateInfo = {};
     allocatorCreateInfo.physicalDevice = m_physicalDevice;
-    allocatorCreateInfo.device = sDevice;
+    allocatorCreateInfo.device = m_device;
     allocatorCreateInfo.instance = m_instance;
     allocatorCreateInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-    vmaCreateAllocator(&allocatorCreateInfo, &sAllocator);
-    m_deletionQueue.Push([&]() {vmaDestroyAllocator(sAllocator); });
+    vmaCreateAllocator(&allocatorCreateInfo, &m_allocator);
+    m_deletionQueue.Push([&]() {vmaDestroyAllocator(m_allocator); });
 
     return true;
 }
 
 void gns::rendering::Device::CreateSwapchain()
 {
-    vkb::SwapchainBuilder swapchainBuilder{ m_physicalDevice, sDevice, m_surface };
+    vkb::SwapchainBuilder swapchainBuilder{ m_physicalDevice, m_device, m_surface };
 
     m_swapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
@@ -525,12 +496,12 @@ void gns::rendering::Device::CreateSwapchain()
     rimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     //allocate and create the image
-    vmaCreateImage(sAllocator, &rimg_info, &rimg_allocinfo, &m_renderTargetImage.image, &m_renderTargetImage.allocation, nullptr);
+    vmaCreateImage(m_allocator, &rimg_info, &rimg_allocinfo, &m_renderTargetImage.image, &m_renderTargetImage.allocation, nullptr);
 
     //build a image-view for the draw image to use for rendering
     VkImageViewCreateInfo rview_info = utils::ImageViewCreateInfo(m_renderTargetImage.imageFormat, m_renderTargetImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
 
-    _VK_CHECK(vkCreateImageView(sDevice, &rview_info, nullptr, &m_renderTargetImage.imageView),"");
+    _VK_CHECK(vkCreateImageView(m_device, &rview_info, nullptr, &m_renderTargetImage.imageView),"");
 
 
     m_depthImage.imageFormat = VK_FORMAT_D32_SFLOAT;
@@ -541,38 +512,38 @@ void gns::rendering::Device::CreateSwapchain()
     VkImageCreateInfo dimg_info = utils::ImageCreateInfo(m_depthImage.imageFormat, depthImageUsages, drawImageExtent);
 
     //allocate and create the image
-    vmaCreateImage(sAllocator, &dimg_info, &rimg_allocinfo, &m_depthImage.image, &m_depthImage.allocation, nullptr);
+    vmaCreateImage(m_allocator, &dimg_info, &rimg_allocinfo, &m_depthImage.image, &m_depthImage.allocation, nullptr);
 
     //build a image-view for the draw image to use for rendering
     VkImageViewCreateInfo dview_info = utils::ImageViewCreateInfo(m_depthImage.imageFormat, m_depthImage.image, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-    _VK_CHECK(vkCreateImageView(sDevice, &dview_info, nullptr, &m_depthImage.imageView), "Failed to create Depth Image");
+    _VK_CHECK(vkCreateImageView(m_device, &dview_info, nullptr, &m_depthImage.imageView), "Failed to create Depth Image");
 }
 
 void gns::rendering::Device::ResizeSwapchain()
 {
-	vkDeviceWaitIdle(sDevice);
+	vkDeviceWaitIdle(m_device);
 
 	DestroySwapchain();
 	CreateSwapchain();
 
     DescriptorWriter writer;
     writer.WriteImage(0, m_renderTargetImage.imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    writer.UpdateSet(sDevice, m_renderTargetDescriptor);
+    writer.UpdateSet(m_device, m_renderTargetDescriptor);
 }
 
 void gns::rendering::Device::DestroySwapchain()
 {
 
-    vkDestroyImageView(sDevice, m_renderTargetImage.imageView, nullptr);
-    vmaDestroyImage(sAllocator, m_renderTargetImage.image, m_renderTargetImage.allocation);
+    vkDestroyImageView(m_device, m_renderTargetImage.imageView, nullptr);
+    vmaDestroyImage(m_allocator, m_renderTargetImage.image, m_renderTargetImage.allocation);
 
-    vkDestroyImageView(sDevice, m_depthImage.imageView, nullptr);
-    vmaDestroyImage(sAllocator, m_depthImage.image, m_depthImage.allocation);
+    vkDestroyImageView(m_device, m_depthImage.imageView, nullptr);
+    vmaDestroyImage(m_allocator, m_depthImage.image, m_depthImage.allocation);
 
-    vkDestroySwapchainKHR(sDevice, m_swapchain, nullptr);
+    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     for (int i = 0; i < m_imageViews.size(); i++) {
-        vkDestroyImageView(sDevice, m_imageViews[i], nullptr);
+        vkDestroyImageView(m_device, m_imageViews[i], nullptr);
     }
 }
 void gns::rendering::Device::InitDescriptors()
@@ -581,16 +552,16 @@ void gns::rendering::Device::InitDescriptors()
     {
         { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
     };
-    m_globalDescriptorAllocator.InitPool(sDevice, 10, sizes);
+    m_globalDescriptorAllocator.InitPool(m_device, 10, sizes);
     {
         DescriptorLayoutBuilder builder;
         builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-        m_renderTargetSetLayout = builder.Build(sDevice, VK_SHADER_STAGE_COMPUTE_BIT);
+        m_renderTargetSetLayout = builder.Build(m_device, VK_SHADER_STAGE_COMPUTE_BIT);
     }
-    m_renderTargetDescriptor = m_globalDescriptorAllocator.Allocate(sDevice, m_renderTargetSetLayout);
+    m_renderTargetDescriptor = m_globalDescriptorAllocator.Allocate(m_device, m_renderTargetSetLayout);
     DescriptorWriter writer;
     writer.WriteImage(0, m_renderTargetImage.imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    writer.UpdateSet(sDevice, m_renderTargetDescriptor);
+    writer.UpdateSet(m_device, m_renderTargetDescriptor);
 
 
     for (uint32_t i = 0; i < m_imageCount; i++) {
@@ -601,9 +572,9 @@ void gns::rendering::Device::InitDescriptors()
             { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 },
         };
         m_frames[i].frameDescriptors = DescriptorAllocatorGrowable{};
-        m_frames[i].frameDescriptors.Init(sDevice, 1000, frame_sizes);
+        m_frames[i].frameDescriptors.Init(m_device, 1000, frame_sizes);
         m_deletionQueue.Push([&, i]() {
-            m_frames[i].frameDescriptors.DestroyPools(sDevice);
+            m_frames[i].frameDescriptors.DestroyPools(m_device);
             });
     }
     //Per frame Descriptor Layout:
@@ -613,12 +584,12 @@ void gns::rendering::Device::InitDescriptors()
         builder.AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // object buffer
         builder.AddBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // point light buffer
         builder.AddBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // spot light buffer
-        m_perFrameDescriptorLayout = builder.Build(sDevice, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+        m_perFrameDescriptorLayout = builder.Build(m_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     }
 
     m_deletionQueue.Push([&]() {
-        m_globalDescriptorAllocator.DestroyPool(sDevice);
-        vkDestroyDescriptorSetLayout(sDevice, m_renderTargetSetLayout, nullptr);
+        m_globalDescriptorAllocator.DestroyPool(m_device);
+        vkDestroyDescriptorSetLayout(m_device, m_renderTargetSetLayout, nullptr);
         });
 }
 
@@ -630,21 +601,21 @@ void gns::rendering::Device::InitCommands()
     m_frames.resize(m_imageCount);
     for (uint32_t i = 0; i < m_imageCount; i++) {
 
-        _VK_CHECK(vkCreateCommandPool(sDevice, &commandPoolInfo, nullptr, &m_frames[i].commandPool), "Failed to create Commandpool");
+        _VK_CHECK(vkCreateCommandPool(m_device, &commandPoolInfo, nullptr, &m_frames[i].commandPool), "Failed to create Commandpool");
         VkCommandBufferAllocateInfo cmdAllocInfo = utils::CommandBufferAllocateInfo(m_frames[i].commandPool);
-        _VK_CHECK(vkAllocateCommandBuffers(sDevice, &cmdAllocInfo, &m_frames[i].mainCommandBuffer), "Failed to allocate command buffer");
+        _VK_CHECK(vkAllocateCommandBuffers(m_device, &cmdAllocInfo, &m_frames[i].mainCommandBuffer), "Failed to allocate command buffer");
     }
 
     //immediate Commands:
-    _VK_CHECK(vkCreateCommandPool(sDevice, &commandPoolInfo, nullptr, &sImmediateSubmitStruct._immCommandPool), "Failed toi create immediate CommandPool.");
+    _VK_CHECK(vkCreateCommandPool(m_device, &commandPoolInfo, nullptr, &sImmediateSubmitStruct._immCommandPool), "Failed toi create immediate CommandPool.");
 
     // allocate the command buffer for immediate submits
     VkCommandBufferAllocateInfo cmdAllocInfo = utils::CommandBufferAllocateInfo(sImmediateSubmitStruct._immCommandPool, 1);
 
-    _VK_CHECK(vkAllocateCommandBuffers(sDevice, &cmdAllocInfo, &sImmediateSubmitStruct._immCommandBuffer), "Failed to Allocate immediate CommandBuffer");
+    _VK_CHECK(vkAllocateCommandBuffers(m_device, &cmdAllocInfo, &sImmediateSubmitStruct._immCommandBuffer), "Failed to Allocate immediate CommandBuffer");
 
     m_deletionQueue.Push([=]() {
-        vkDestroyCommandPool(sDevice, sImmediateSubmitStruct._immCommandPool, nullptr);
+        vkDestroyCommandPool(m_device, sImmediateSubmitStruct._immCommandPool, nullptr);
         });
 }
 
@@ -654,22 +625,22 @@ void gns::rendering::Device::InitSyncStructures()
     VkSemaphoreCreateInfo semaphoreCreateInfo = utils::SemaphoreCreateInfo();
 
     for (uint32_t i = 0; i < m_imageCount; i++) {
-        _VK_CHECK(vkCreateFence(sDevice, &fenceCreateInfo, nullptr, &m_frames[i].renderFence), "Failed to create fence");
+        _VK_CHECK(vkCreateFence(m_device, &fenceCreateInfo, nullptr, &m_frames[i].renderFence), "Failed to create fence");
 
-        _VK_CHECK(vkCreateSemaphore(sDevice, &semaphoreCreateInfo, nullptr, &m_frames[i].presentSemaphore), "Failed to create PresentSemaphoire");
-        _VK_CHECK(vkCreateSemaphore(sDevice, &semaphoreCreateInfo, nullptr, &m_frames[i].renderSemaphore), "Failed to create renderSemaphore");
+        _VK_CHECK(vkCreateSemaphore(m_device, &semaphoreCreateInfo, nullptr, &m_frames[i].presentSemaphore), "Failed to create PresentSemaphoire");
+        _VK_CHECK(vkCreateSemaphore(m_device, &semaphoreCreateInfo, nullptr, &m_frames[i].renderSemaphore), "Failed to create renderSemaphore");
     }
 
-    _VK_CHECK(vkCreateFence(sDevice, &fenceCreateInfo, nullptr, &sImmediateSubmitStruct._immFence), "Failed to Create Immediate Fence.");
-    m_deletionQueue.Push([=]() { vkDestroyFence(sDevice, sImmediateSubmitStruct._immFence, nullptr); });
+    _VK_CHECK(vkCreateFence(m_device, &fenceCreateInfo, nullptr, &sImmediateSubmitStruct._immFence), "Failed to Create Immediate Fence.");
+    m_deletionQueue.Push([=]() { vkDestroyFence(m_device, sImmediateSubmitStruct._immFence, nullptr); });
 }
 #pragma endregion
 
 #pragma region BufferUpdates
 
-void gns::rendering::Device::ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function)
+void gns::rendering::Device::ImmediateSubmit(VkDevice device, VkQueue queue, std::function<void(VkCommandBuffer cmd)>&& function)
 {
-    _VK_CHECK(vkResetFences(sDevice, 1, &sImmediateSubmitStruct._immFence), "");
+    _VK_CHECK(vkResetFences(device, 1, &sImmediateSubmitStruct._immFence), "");
     _VK_CHECK(vkResetCommandBuffer(sImmediateSubmitStruct._immCommandBuffer, 0), "");
     VkCommandBuffer cmd = sImmediateSubmitStruct._immCommandBuffer;
     VkCommandBufferBeginInfo cmdBeginInfo = utils::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -678,44 +649,42 @@ void gns::rendering::Device::ImmediateSubmit(std::function<void(VkCommandBuffer 
     _VK_CHECK(vkEndCommandBuffer(cmd), "");
     VkCommandBufferSubmitInfo cmdinfo = utils::CommandBufferSubmitInfo(cmd);
     VkSubmitInfo2 submit = utils::SubmitInfo(&cmdinfo, nullptr, nullptr);
-    _VK_CHECK(vkQueueSubmit2(sGraphicsQueue, 1, &submit, sImmediateSubmitStruct._immFence), "");
-    _VK_CHECK(vkWaitForFences(sDevice, 1, &sImmediateSubmitStruct._immFence, true, 9999999999), "Fence Time Out: immediateFence");
+    _VK_CHECK(vkQueueSubmit2(queue, 1, &submit, sImmediateSubmitStruct._immFence), "");
+    _VK_CHECK(vkWaitForFences(device, 1, &sImmediateSubmitStruct._immFence, true, 9999999999), "Fence Time Out: immediateFence");
 }
 
-void gns::rendering::Device::UpdateUniformBuffer(void* data, const VulkanBuffer* buffer)
+void gns::rendering::Device::UpdateUniformBuffer(void* data, const VulkanBuffer& buffer)
 {
-    buffer->info.pMappedData;
-    void* dataPtr = (buffer->allocation->GetMappedData());
+    void* dataPtr = (buffer.allocation->GetMappedData());
     if (dataPtr != nullptr)
-        memcpy(dataPtr, data, buffer->bufferSize);
+        memcpy(dataPtr, data, buffer.bufferSize);
     else
         std::cout << "SHIT!";
 }
 
 void gns::rendering::Device::UpdateGlobalUbo(void* data, size_t size)
 {
-    m_gpuSceneDataBuffer->info.pMappedData;
-    void* dataPtr = (m_gpuSceneDataBuffer->allocation->GetMappedData());
+    void* dataPtr = (m_gpuSceneDataBuffer.allocation->GetMappedData());
     memcpy(dataPtr, data, size);
 
 }
 
 void gns::rendering::Device::UpdateStorageBuffer(void* data, size_t size)
 {
-    void* dataPtr = (m_objectStorageBuffer->allocation->GetMappedData());
+    void* dataPtr = (m_objectStorageBuffer.allocation->GetMappedData());
     memcpy(dataPtr, data, size);
 
 }
 
 void gns::rendering::Device::UpdatePointLightBuffer(void* data, size_t size)
 {
-    void* dataPtr = (m_pointLightStorageBuffer->allocation->GetMappedData());
+    void* dataPtr = (m_pointLightStorageBuffer.allocation->GetMappedData());
     memcpy(dataPtr, data, size);
 }
 
 void gns::rendering::Device::UpdateSpotLightBuffer(void* data, size_t size)
 {
-    void* dataPtr = (m_spotLightStorageBuffer->allocation->GetMappedData());
+    void* dataPtr = (m_spotLightStorageBuffer.allocation->GetMappedData());
     memcpy(dataPtr, data, size);
 }
 #pragma endregion
@@ -726,11 +695,11 @@ bool gns::rendering::Device::BeginDraw(uint32_t& swapchainImageIndex)
 {
     m_screen->resized = false;
 
-    _VK_CHECK(vkWaitForFences(sDevice, 1, &GetCurrentFrame().renderFence, true, 1000000000), "Wait for fence time out... ");
-    _VK_CHECK(vkResetFences(sDevice, 1, &GetCurrentFrame().renderFence), "");
+    _VK_CHECK(vkWaitForFences(m_device, 1, &GetCurrentFrame().renderFence, true, 1000000000), "Wait for fence time out... ");
+    _VK_CHECK(vkResetFences(m_device, 1, &GetCurrentFrame().renderFence), "");
     GetCurrentFrame().deletionQueue.Flush();
-    GetCurrentFrame().frameDescriptors.ClearPools(sDevice);
-    VkResult result = vkAcquireNextImageKHR(sDevice, m_swapchain,
+    GetCurrentFrame().frameDescriptors.ClearPools(m_device);
+    VkResult result = vkAcquireNextImageKHR(m_device, m_swapchain,
         1000000000, GetCurrentFrame().presentSemaphore, nullptr, &swapchainImageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         m_screen->resized = true;
@@ -797,31 +766,31 @@ void gns::rendering::Device::SetDrawStructs(VkCommandBuffer cmd)
 void gns::rendering::Device::UpdatePerFrameDescriptors(VkDescriptorSet& perFrameSet)
 {
     DescriptorWriter writer;
-    writer.WriteBuffer(0, m_gpuSceneDataBuffer->buffer,
-        m_gpuSceneDataBuffer->bufferSize, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    writer.WriteBuffer(0, m_gpuSceneDataBuffer.buffer,
+        m_gpuSceneDataBuffer.bufferSize, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 
-    writer.WriteBuffer(1, m_objectStorageBuffer->buffer,
-        m_objectStorageBuffer->bufferSize, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    writer.WriteBuffer(1, m_objectStorageBuffer.buffer,
+        m_objectStorageBuffer.bufferSize, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 
-	writer.WriteBuffer(2, m_pointLightStorageBuffer->buffer,
-        m_pointLightStorageBuffer->bufferSize, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+	writer.WriteBuffer(2, m_pointLightStorageBuffer.buffer,
+        m_pointLightStorageBuffer.bufferSize, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 
-	writer.WriteBuffer(3, m_spotLightStorageBuffer->buffer,
-        m_spotLightStorageBuffer->bufferSize, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+	writer.WriteBuffer(3, m_spotLightStorageBuffer.buffer,
+        m_spotLightStorageBuffer.bufferSize, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 
-	writer.UpdateSet(sDevice, perFrameSet);
+	writer.UpdateSet(m_device, perFrameSet);
 }
 
 void gns::rendering::Device::UpdateMaterialData(VkDescriptorSet& set, Material& material)
 {
     DescriptorWriter image_writer;
-    image_writer.WriteBuffer(0, material.buffer->buffer, material.buffer->bufferSize, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    image_writer.WriteBuffer(0, material.buffer.buffer, material.buffer.bufferSize, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     for(size_t i = 0; i<material.textures.size(); i++)
     {
-		VulkanImage* vulkanImage = material.textures[i]->vulkanImage;
+	    const VulkanImage* vulkanImage = &(material.textures[i]->vulkanImage);
 		image_writer.WriteImage(i+1, vulkanImage->imageView, vulkanImage->sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     }
-    image_writer.UpdateSet(sDevice, set);
+    image_writer.UpdateSet(m_device, set);
 }
 
 
@@ -862,9 +831,9 @@ void gns::rendering::Device::Draw(
 
     utils::CopyImageToImage(cmd, m_renderTargetImage.image, m_images[swapchainImageIndex], drawExtent, m_swapchainExtent);
 
-    utils::TransitionImage(cmd, offscreen_Texture->vulkanImage->image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    utils::CopyImageToImage(cmd, m_renderTargetImage.image, offscreen_Texture->vulkanImage->image, drawExtent, drawExtent);
-    utils::TransitionImage(cmd, offscreen_Texture->vulkanImage->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    utils::TransitionImage(cmd, offscreen_Texture->vulkanImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    utils::CopyImageToImage(cmd, m_renderTargetImage.image, offscreen_Texture->vulkanImage.image, drawExtent, drawExtent);
+    utils::TransitionImage(cmd, offscreen_Texture->vulkanImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	DrawImGui(cmd, m_imageViews[swapchainImageIndex]);
     utils::TransitionImage(cmd, m_images[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -884,7 +853,7 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
     m_currentBoundShader = nullptr;
     m_currentMaterial = nullptr;
     
-    VkDescriptorSet perFrameDescriptor = GetCurrentFrame().frameDescriptors.Allocate(sDevice, m_perFrameDescriptorLayout);
+    VkDescriptorSet perFrameDescriptor = GetCurrentFrame().frameDescriptors.Allocate(m_device, m_perFrameDescriptorLayout);
     UpdatePerFrameDescriptors(perFrameDescriptor);
 
     for(size_t i = 0; i < indices.size(); i++)
@@ -903,7 +872,7 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
 
         if (material != m_currentMaterial)
         {
-            VkDescriptorSet imageSet = GetCurrentFrame().frameDescriptors.Allocate(sDevice, material->shader->shader.m_descriptorSetLayout);
+            VkDescriptorSet imageSet = GetCurrentFrame().frameDescriptors.Allocate(m_device, material->shader->shader.m_descriptorSetLayout);
             UpdateMaterialData(imageSet, *material);
 
             std::vector<VkDescriptorSet> sets = { imageSet };
@@ -919,7 +888,7 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
 
         vkCmdPushConstants(cmd, material->shader->shader.m_pipelineLayout,
             VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
-        vkCmdBindIndexBuffer(cmd, mesh->DrawData.indexBuffer->buffer,
+        vkCmdBindIndexBuffer(cmd, mesh->DrawData.indexBuffer.buffer,
             0, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(cmd, mesh->indexBufferRange.count,
             1, mesh->indexBufferRange.startIndex, 0, objectIndex);
@@ -948,7 +917,7 @@ void gns::rendering::Device::EndFrame(VkCommandBuffer& cmd, uint32_t& swapchainI
 
     VkSubmitInfo2 submit = utils::SubmitInfo(&cmdinfo, &signalInfo, &waitInfo);
 
-    _VK_CHECK(vkQueueSubmit2(sGraphicsQueue, 1, &submit, GetCurrentFrame().renderFence), "Submit Failed");
+    _VK_CHECK(vkQueueSubmit2(m_graphicsQueue, 1, &submit, GetCurrentFrame().renderFence), "Submit Failed");
 
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -961,7 +930,7 @@ void gns::rendering::Device::EndFrame(VkCommandBuffer& cmd, uint32_t& swapchainI
 
     presentInfo.pImageIndices = &swapchainImageIndex;
 
-    VkResult presentResult = vkQueuePresentKHR(sGraphicsQueue, &presentInfo);
+    VkResult presentResult = vkQueuePresentKHR(m_graphicsQueue, &presentInfo);
     if (presentResult == VK_ERROR_OUT_OF_DATE_KHR) {
         m_screen->resized = true;
     }
@@ -990,41 +959,40 @@ void gns::rendering::Device::UploadMesh(std::span<uint32_t> indices, std::span<V
     const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
     vulkanMesh = {};
-    vulkanMesh.indexBuffer = VulkanBuffer::CreateBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    vulkanMesh.indexBuffer = VulkanBuffer::Create(m_allocator, indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VMA_MEMORY_USAGE_GPU_ONLY);
 
-    vulkanMesh.vertexBuffer = VulkanBuffer::CreateBuffer(vertexBufferSize,
+    vulkanMesh.vertexBuffer = VulkanBuffer::Create(m_allocator, vertexBufferSize,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VMA_MEMORY_USAGE_GPU_ONLY);
 
     VkBufferDeviceAddressInfo deviceAdressInfo{
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-        .buffer = vulkanMesh.vertexBuffer->buffer };
+        .buffer = vulkanMesh.vertexBuffer.buffer };
 
-    vulkanMesh.vertexBufferAddress = vkGetBufferDeviceAddress(sDevice, &deviceAdressInfo);
+    vulkanMesh.vertexBufferAddress = vkGetBufferDeviceAddress(m_device, &deviceAdressInfo);
 
-    VulkanBuffer* staging = VulkanBuffer::CreateBuffer( vertexBufferSize + indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    VulkanBuffer staging = VulkanBuffer::Create(m_allocator, vertexBufferSize + indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
-    void* data = staging->allocation->GetMappedData();
+    void* data = staging.allocation->GetMappedData();
     memcpy(data, vertices.data(), vertexBufferSize);
     memcpy(static_cast<char*>(data) + vertexBufferSize, indices.data(), indexBufferSize);
 
-    ImmediateSubmit([&](VkCommandBuffer cmd) {
+    ImmediateSubmit(m_device, m_graphicsQueue, [&](VkCommandBuffer cmd) {
         VkBufferCopy vertexCopy{ 0 };
         vertexCopy.dstOffset = 0;
         vertexCopy.srcOffset = 0;
         vertexCopy.size = vertexBufferSize;
 
-        vkCmdCopyBuffer(cmd, staging->buffer, vulkanMesh.vertexBuffer->buffer, 1, &vertexCopy);
+        vkCmdCopyBuffer(cmd, staging.buffer, vulkanMesh.vertexBuffer.buffer, 1, &vertexCopy);
 
         VkBufferCopy indexCopy{ 0 };
         indexCopy.dstOffset = 0;
         indexCopy.srcOffset = vertexBufferSize;
         indexCopy.size = indexBufferSize;
 
-        vkCmdCopyBuffer(cmd, staging->buffer, vulkanMesh.indexBuffer->buffer, 1, &indexCopy);
+        vkCmdCopyBuffer(cmd, staging.buffer, vulkanMesh.indexBuffer.buffer, 1, &indexCopy);
         });
-    delete(staging);
 }
 
 

@@ -13,7 +13,25 @@ void gns::editor::scene::EditorCamera::InitSystem()
 	m_cameraSpeed = 5;
 	RenderSystem* renderSystem = SystemsManager::GetSystem<RenderSystem>();
 	renderSystem->SetActiveCamera(&m_camera, &m_transform);
+
 	m_screen = renderSystem->GetTargetScren();
+    m_transform.rotation = { pitch, yaw, 0.0f };
+	glm::vec3 forward = {
+        cosf(pitch) * sinf(yaw),
+        sinf(pitch),
+        cosf(pitch) * cosf(yaw)
+    };
+    forward = glm::normalize(forward);
+
+    glm::vec3 worldUp = { 0.0f, 1.0f, 0.0f };
+    glm::vec3 right = glm::normalize(glm::cross(forward, worldUp));
+    glm::vec3 up = glm::normalize(glm::cross(right, forward));
+    // --- VIEW MATRIX ---
+    m_camera.m_view = glm::lookAt(
+        m_transform.position,
+        m_transform.position + forward,
+        up
+    );
 }
 
 void gns::editor::scene::EditorCamera::SetViewYXZ(glm::vec3 position, glm::vec3 rotation)
@@ -88,8 +106,6 @@ void gns::editor::scene::EditorCamera::UpdateSystem(const float deltaTime)
             up
         );
     }
-
-    // Projection (Vulkan-style)
     m_camera.m_projection = glm::perspective(
         glm::radians(m_camera.m_fov),
         m_camera.m_aspect,
@@ -97,8 +113,6 @@ void gns::editor::scene::EditorCamera::UpdateSystem(const float deltaTime)
         m_camera.m_far
     );
     m_camera.m_projection[1][1] *= -1;
-
-    // Final camera matrix
     m_camera.m_cameraMatrix = m_camera.m_projection * m_camera.m_view;
 }
 

@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "glm/glm.hpp"
 #include "../../Object/Object.h"
-
+#include "../vulkan/Utils/VulkanObjects.h"
 namespace gns::rendering
 {
 	struct VulkanImage;
@@ -30,7 +30,7 @@ namespace gns::rendering
 		uint32_t width;
 		uint32_t height;
 		uint32_t mipLevels = 0;
-		VulkanImage* vulkanImage;
+		VulkanImage vulkanImage;
 
 	private:
 		bool keepData;

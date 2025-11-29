@@ -103,8 +103,7 @@ gns::rendering::Mesh* gns::RenderSystem::GetMesh(const std::string& name)
 gns::rendering::Material* gns::RenderSystem::CreateMaterial(const std::string& materialFilePath)
 {
 	rendering::Material* material = Object::Create<rendering::Material>("default_material");
-    material->buffer = rendering::VulkanBuffer::CreateBuffer(sizeof(rendering::MaterialUniformData), 
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    material->buffer = m_renderer->CreateUniformBuffer(sizeof(rendering::MaterialUniformData));
     material->uniformData = {};
     return material;
 }
@@ -112,8 +111,7 @@ gns::rendering::Material* gns::RenderSystem::CreateMaterial(const std::string& m
 gns::rendering::Material* gns::RenderSystem::CreateMaterial(rendering::Shader* shader, const std::string& name)
 {
     rendering::Material* material = Object::Create<rendering::Material>(name);
-    material->buffer = rendering::VulkanBuffer::CreateBuffer(sizeof(rendering::MaterialUniformData),
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    material->buffer = m_renderer->CreateUniformBuffer(sizeof(rendering::MaterialUniformData));
     material->uniformData = {};
     material->shader = shader;
 

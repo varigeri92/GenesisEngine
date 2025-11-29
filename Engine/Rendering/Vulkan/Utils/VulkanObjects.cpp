@@ -3,21 +3,60 @@
 #include "VulkanObjects.h"
 #include "../Device.h"
 
-gns::rendering::VulkanBuffer::VulkanBuffer() :  buffer(VK_NULL_HANDLE), allocation(VK_NULL_HANDLE), info() {}
+gns::rendering::VulkanBuffer::VulkanBuffer()
+	: buffer(VK_NULL_HANDLE)
+	, allocation(VK_NULL_HANDLE)
+	, info{}
+	, bufferSize(0)
+	, usageFlags(0)
+	, memoryUsage(VMA_MEMORY_USAGE_UNKNOWN)
+	, allocator(VK_NULL_HANDLE)
+{
+}
 
 gns::rendering::VulkanBuffer::~VulkanBuffer()
 {
-	LOG_INFO("Delete Buffer");
-	if (destroyed) return;
 	Destroy();
 }
 
-gns::rendering::VulkanBuffer* gns::rendering::VulkanBuffer::CreateBuffer(
-	size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
+gns::rendering::VulkanBuffer::VulkanBuffer(VulkanBuffer&& other) noexcept
 {
-	VulkanBuffer* buffer = new VulkanBuffer();
+	*this = std::move(other);
+}
 
-	buffer->bufferSize = allocSize;
+gns::rendering::VulkanBuffer& gns::rendering::VulkanBuffer::operator=(VulkanBuffer&& other) noexcept
+{
+	if (this != &other)
+	{
+		Destroy();
+
+		buffer = other.buffer;
+		allocation = other.allocation;
+		info = other.info;
+		bufferSize = other.bufferSize;
+		usageFlags = other.usageFlags;
+		memoryUsage = other.memoryUsage;
+		allocator = other.allocator;
+
+		other.buffer = VK_NULL_HANDLE;
+		other.allocation = VK_NULL_HANDLE;
+		other.allocator = VK_NULL_HANDLE;
+		other.bufferSize = 0;
+		other.usageFlags = 0;
+		other.memoryUsage = VMA_MEMORY_USAGE_UNKNOWN;
+		other.info = {};
+	}
+
+	return *this;
+}
+
+
+gns::rendering::VulkanBuffer gns::rendering::VulkanBuffer::Create(VmaAllocator allocator, VkDeviceSize allocSize,
+	VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags allocFlags)
+{
+	VulkanBuffer buffer{};
+
+	buffer.bufferSize = allocSize;
 	VkBufferCreateInfo bufferInfo = {};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	bufferInfo.pNext = nullptr;
@@ -29,32 +68,114 @@ gns::rendering::VulkanBuffer* gns::rendering::VulkanBuffer::CreateBuffer(
 	vmaAllocInfo.usage = memoryUsage;
 	vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-	_VK_CHECK(vmaCreateBuffer(Device::sAllocator, &bufferInfo, &vmaAllocInfo,
-		&buffer->buffer,
-		&buffer->allocation,
-		&buffer->info), "Bufferallocation Failed");
+	_VK_CHECK(vmaCreateBuffer(allocator, &bufferInfo, &vmaAllocInfo,
+		&buffer.buffer,
+		&buffer.allocation,
+		&buffer.info), "Bufferallocation Failed");
 
 	return buffer;
 }
 
 void gns::rendering::VulkanBuffer::Destroy()
 {
-	destroyed = true;
-	vmaDestroyBuffer(Device::sAllocator, buffer, allocation);
+	if (!buffer || !allocation || !allocator)
+		return;
+
+	vmaDestroyBuffer(allocator, buffer, allocation);
+
+	buffer = VK_NULL_HANDLE;
+	allocation = VK_NULL_HANDLE;
+	allocator = VK_NULL_HANDLE;
+	bufferSize = 0;
+	usageFlags = 0;
+	memoryUsage = VMA_MEMORY_USAGE_UNKNOWN;
+	info = {};
 }
 
 
 // IMAGE:
-gns::rendering::VulkanImage::VulkanImage() : destroyed(true) {}
+gns::rendering::VulkanImage::VulkanImage()
+{
+	image = VK_NULL_HANDLE;
+	imageView = VK_NULL_HANDLE;
+	allocation = VK_NULL_HANDLE;
+	imageExtent = { 0,0,1 };
+	imageFormat = VK_FORMAT_UNDEFINED;
+	sampler = VK_NULL_HANDLE;
+	texture_descriptorSet = VK_NULL_HANDLE;
+	setlayout = VK_NULL_HANDLE;
+}
 
 gns::rendering::VulkanImage::~VulkanImage()
 {
 	Destroy();
 }
 
+gns::rendering::VulkanImage::VulkanImage(gns::rendering::VulkanImage&& other) noexcept
+{
+	*this = std::move(other);
+}
+
+gns::rendering::VulkanImage& gns::rendering::VulkanImage::operator=(VulkanImage&& other) noexcept
+{
+	if (this != &other)
+	{
+		queue = other.queue;
+		vkDevice = other.vkDevice;
+		allocator = other.allocator;
+		image = other.image;
+		imageView = other.imageView;
+		allocation = other.allocation;
+		imageExtent = other.imageExtent;
+		imageFormat = other.imageFormat;
+		sampler = other.sampler;
+		texture_descriptorSet = other.texture_descriptorSet;
+		setlayout = other.setlayout;
+
+		other.queue = VK_NULL_HANDLE;
+		other.vkDevice = VK_NULL_HANDLE;
+		other.allocator = VK_NULL_HANDLE;
+		other.image = VK_NULL_HANDLE;
+		other.imageView = VK_NULL_HANDLE;
+		other.allocation = VK_NULL_HANDLE;
+		other.imageExtent = {};
+		other.imageFormat = VK_FORMAT_UNDEFINED;
+		other.sampler = VK_NULL_HANDLE;
+		other.texture_descriptorSet = VK_NULL_HANDLE;
+		other.setlayout = VK_NULL_HANDLE;
+	}
+	return *this;
+}
+
+gns::rendering::VulkanImage gns::rendering::VulkanImage::Create(Device& device, VkExtent3D size, VkFormat format,
+                                                                VkImageUsageFlags usage, bool mipmapped)
+{
+	VulkanImage image{};
+	image.vkDevice = device.GetDevice();
+	image.allocator = device.GetAllocator();
+	image.queue = device.GetGraphicsQueue();
+	image.CreateImage(size, format, usage, mipmapped);
+	return image;
+}
+
+gns::rendering::VulkanImage gns::rendering::VulkanImage::Create(void* data, Device& device, VkExtent3D size, VkFormat format,
+	VkImageUsageFlags usage, bool mipmapped)
+{
+	VulkanImage image{};
+	image.vkDevice = device.GetDevice();
+	image.allocator = device.GetAllocator();
+	image.queue = device.GetGraphicsQueue();
+	image.CreateImage(data, size, format, usage, mipmapped);
+	return image;
+}
+
+gns::rendering::VulkanImage gns::rendering::VulkanImage::Create()
+{
+	return {};
+}
+
 void gns::rendering::VulkanImage::CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped)
 {
-	destroyed = false;
 	imageFormat = format;
 	imageExtent = size;
 
@@ -70,7 +191,7 @@ void gns::rendering::VulkanImage::CreateImage(VkExtent3D size, VkFormat format, 
 	allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	// allocate and create the image
-	_VK_CHECK(vmaCreateImage(Device::sAllocator, &img_info, &allocinfo, &image, &allocation, nullptr),
+	_VK_CHECK(vmaCreateImage(allocator, &img_info, &allocinfo, &image, &allocation, nullptr),
 		"Failed to create Image");
 
 	// if the format is a depth format, we will need to have it use the correct
@@ -84,20 +205,19 @@ void gns::rendering::VulkanImage::CreateImage(VkExtent3D size, VkFormat format, 
 	VkImageViewCreateInfo view_info = utils::ImageViewCreateInfo(format, image, aspectFlag);
 	view_info.subresourceRange.levelCount = img_info.mipLevels;
 
-	_VK_CHECK(vkCreateImageView(Device::sDevice, &view_info, nullptr, &imageView), "Failed To createImageView");
+	_VK_CHECK(vkCreateImageView(vkDevice, &view_info, nullptr, &imageView), "Failed To createImageView");
 }
 
 void gns::rendering::VulkanImage::CreateImage(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
                                               bool mipmapped)
 {
-
 	const size_t data_size = size.depth * size.width * size.height * 4;
-	VulkanBuffer* uploadBuffer = VulkanBuffer::CreateBuffer(data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-	memcpy(uploadBuffer->info.pMappedData, data, data_size);
+	VulkanBuffer uploadBuffer = VulkanBuffer::Create(allocator, data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+	memcpy(uploadBuffer.info.pMappedData, data, data_size);
 
 	CreateImage(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
 
-	Device::ImmediateSubmit([&](VkCommandBuffer cmd) {
+	Device::ImmediateSubmit(vkDevice, queue, [&](VkCommandBuffer cmd) {
 
 		utils::TransitionImage(cmd, image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -112,38 +232,54 @@ void gns::rendering::VulkanImage::CreateImage(void* data, VkExtent3D size, VkFor
 		copyRegion.imageSubresource.layerCount = 1;
 		copyRegion.imageExtent = size;
 
-		vkCmdCopyBufferToImage(cmd, uploadBuffer->buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+		vkCmdCopyBufferToImage(cmd, uploadBuffer.buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
 			&copyRegion);
 
 		utils::TransitionImage(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		});
-	delete(uploadBuffer);
 }
 
 void gns::rendering::VulkanImage::CreateSampler(VkFilter filter, VkSamplerAddressMode mode)
 {
+	if(vkDevice == VK_NULL_HANDLE)
+	{
+		LOG_ERROR("Trying to create Sampler, ut devise is invalid or destroyed!");
+		return;
+	}
+
 	VkSamplerCreateInfo samplerInfo = utils::SamplerCreateInfo(filter, mode);
-	vkCreateSampler(Device::sDevice, &samplerInfo, nullptr, &sampler);
+	vkCreateSampler(vkDevice, &samplerInfo, nullptr, &sampler);
 	hasSampler = true;
 }
 
 void gns::rendering::VulkanImage::Destroy()
 {
-	if(destroyed)
-		return;
-	vkDestroyImageView(Device::sDevice, imageView, nullptr);
-	vmaDestroyImage(Device::sAllocator, image, allocation);
+	LOG_INFO("Destroying Vulkan Image!");
+	if(imageView != VK_NULL_HANDLE)
+		vkDestroyImageView(vkDevice, imageView, nullptr);
 
-	if (hasSampler)
-		vkDestroySampler(Device::sDevice, sampler, nullptr);
+	if(image != VK_NULL_HANDLE)
+		vmaDestroyImage(allocator, image, allocation);
 
-	destroyed = true;
+	if (hasSampler && sampler != VK_NULL_HANDLE)
+		vkDestroySampler(vkDevice, sampler, nullptr);
+
+
+	image = VK_NULL_HANDLE;
+	imageView = VK_NULL_HANDLE;
+	allocation = VK_NULL_HANDLE;
+	imageExtent = { 0,0,1 };
+	imageFormat = VK_FORMAT_UNDEFINED;
+	sampler = VK_NULL_HANDLE;
+	texture_descriptorSet = VK_NULL_HANDLE;
+	setlayout = VK_NULL_HANDLE;
+
 }
 
 void gns::rendering::VulkanShader::Destroy()
 {
-	vkDestroyPipelineLayout(Device::sDevice, m_pipelineLayout, nullptr);
-	vkDestroyPipeline(Device::sDevice, m_pipeline, nullptr);
-	vkDestroyDescriptorSetLayout(Device::sDevice, m_descriptorSetLayout, nullptr);
+	vkDestroyPipelineLayout(device, m_pipelineLayout, nullptr);
+	vkDestroyPipeline(device, m_pipeline, nullptr);
+	vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr);
 }

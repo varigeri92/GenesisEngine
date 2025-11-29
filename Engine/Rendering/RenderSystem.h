@@ -72,6 +72,7 @@ namespace gns
 		GNS_API void ResetMaterialTextures(rendering::Material* material);
 		GNS_API void UploadMesh(rendering::Mesh* mesh);
 
+		rendering::Renderer* GetRenderer() const { return m_renderer; };
 		void InitSystem() override;
 		void UpdateSystem(const float deltaTime) override;
 		void FixedUpdate(const float fixedDeltaTime) override;

@@ -101,6 +101,10 @@ namespace gns::rendering
 		VulkanImage _blackImage;
 		VulkanImage _blueImage;
 
+		VkDevice GetDevice() { return m_device; }
+		VmaAllocator GetAllocator() { return m_allocator; }
+		VkQueue GetGraphicsQueue() { return m_graphicsQueue; }
+
 	private:
 		Screen* m_screen;
 		// Move this for sure:
@@ -110,10 +114,10 @@ namespace gns::rendering
 		VkPipelineLayout m_gradientPipelineLayout; //default compute pipeline layout.
 
 		VkDescriptorSetLayout m_perFrameDescriptorLayout;
-		VulkanBuffer* m_objectStorageBuffer;
-		VulkanBuffer* m_pointLightStorageBuffer;
-		VulkanBuffer* m_spotLightStorageBuffer;
-		VulkanBuffer* m_gpuSceneDataBuffer;
+		VulkanBuffer m_objectStorageBuffer;
+		VulkanBuffer m_pointLightStorageBuffer;
+		VulkanBuffer m_spotLightStorageBuffer;
+		VulkanBuffer m_gpuSceneDataBuffer;
 
 		Texture* offscreen_Texture;
 
@@ -122,8 +126,8 @@ namespace gns::rendering
 		vkb::Instance m_vkb_instance;
 		vkb::Device m_vkb_device;
 
-		static VkDevice sDevice;
-		static VmaAllocator sAllocator;
+		VkDevice m_device;
+		VmaAllocator m_allocator;
 		uint32_t m_imageCount;
 		uint32_t m_imageIndex;
 		VkInstance m_instance;
@@ -135,7 +139,7 @@ namespace gns::rendering
 
 		DeletionQueue m_deletionQueue;
 
-		static VkQueue sGraphicsQueue;
+		VkQueue m_graphicsQueue;
 		uint32_t m_graphicsFamilyIndex;
 		VkQueue m_transferQueue;
 		uint32_t m_transferFamilyIndex;
@@ -168,8 +172,6 @@ namespace gns::rendering
 
 		size_t m_currentBoundShader_guid = 0;
 		size_t m_currentBoundMaterial_guid = 0;
-
-		void CreateImageDataFromScratch();
 
 		void InitPipelines();
 		void InitBackgroundPipelines();
@@ -204,13 +206,13 @@ namespace gns::rendering
 			std::vector<rendering::Mesh*>& meshes,
 			std::vector<Material*>& materials);
 
-		void UpdateUniformBuffer(void* data, const VulkanBuffer* buffer);
+		void UpdateUniformBuffer(void* data, const VulkanBuffer& buffer);
 		void UpdateGlobalUbo(void* data, size_t size);
 		void UpdateStorageBuffer(void* data, size_t size);
 		void UpdatePointLightBuffer(void* data, size_t size);
 		void UpdateSpotLightBuffer(void* data, size_t size);
 
-		static void ImmediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function);
+		static void ImmediateSubmit(VkDevice device, VkQueue queue, std::function<void(VkCommandBuffer cmd)>&& function);
 		void DrawImGui(VkCommandBuffer cmd, VkImageView targetImageView);
 
 		void UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices, 

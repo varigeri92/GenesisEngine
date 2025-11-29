@@ -40,7 +40,7 @@ namespace gns::rendering
 
 		Shader* shader;
 		MaterialUniformData uniformData;
-		VulkanBuffer* buffer;
+		VulkanBuffer buffer;
 		std::vector<Texture*> textures;
 
 		void SetFloat(const std::string& name, float value);

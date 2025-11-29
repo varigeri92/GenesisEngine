@@ -26,39 +26,56 @@ gns::rendering::Device* m_device;
 
 constexpr size_t DEFAULT_VECTROR_MEMORY_RESERVE = 100;
 
-
 gns::rendering::Renderer::Renderer(Screen* screen) : m_screen(screen)
 {
     m_shaderCache = {};
     m_shaderCache.reserve(DEFAULT_VECTROR_MEMORY_RESERVE);
 	m_device = new Device(screen);
-	m_device->m_gpuSceneDataBuffer = VulkanBuffer::CreateBuffer(sizeof(GlobalUniformData),
+	m_device->m_gpuSceneDataBuffer = VulkanBuffer::Create(m_device->GetAllocator(), sizeof(GlobalUniformData),
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
     globalUniform.ambientColor = { 1,1,1,0.1f };
     globalUniform.exposure = 1.f;
     globalUniform.gamma = 1.f;
 
+
+    //3 default textures, white, grey, black. 1 pixel each
+    uint32_t white = glm::packUnorm4x8(glm::vec4(1, 1, 1, 1));
     guid guid = hashString("white");
     Texture* t = Object::CreateWithGuid<Texture>(guid,"white");
-    t->vulkanImage = &m_device->_whiteImage;
-    t->vulkanImage->CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-    t->width = 1;
-    t->height = 1;
-    
-    guid = hashString("black");
-    t = Object::CreateWithGuid<Texture>(guid, "black");
-    t->vulkanImage = &m_device->_blackImage;
-    t->vulkanImage->CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    t->vulkanImage = VulkanImage::Create((void*)&white, *m_device, VkExtent3D{ 1, 1, 1 }, VK_FORMAT_R8G8B8A8_UNORM,
+        VK_IMAGE_USAGE_SAMPLED_BIT);
+    t->vulkanImage.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
     t->width = 1;
     t->height = 1;
 
+    uint32_t blue = glm::packUnorm4x8(glm::vec4(0.5, 0.5, 1, 1));
     guid = hashString("blue");
     t = Object::CreateWithGuid<Texture>(guid, "blue");
-    t->vulkanImage = &m_device->_blueImage;
-    t->vulkanImage->CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    t->vulkanImage = VulkanImage::Create((void*)&blue, *m_device, VkExtent3D{ 1, 1, 1 }, VK_FORMAT_R8G8B8A8_UNORM,
+        VK_IMAGE_USAGE_SAMPLED_BIT);
+    t->vulkanImage.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
     t->width = 1;
     t->height = 1;
+
+    uint32_t black = glm::packUnorm4x8(glm::vec4(0, 0, 0, 0));
+    guid = hashString("black");
+    t = Object::CreateWithGuid<Texture>(guid, "black");
+    t->vulkanImage = VulkanImage::Create((void*)&black, *m_device, VkExtent3D{ 1, 1, 1 }, VK_FORMAT_R8G8B8A8_UNORM,
+        VK_IMAGE_USAGE_SAMPLED_BIT);
+    t->vulkanImage.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    t->width = 1;
+    t->height = 1;
+
+    //checkerboard image
+    constexpr size_t checkerboardSize = 64;
+    uint32_t magenta = glm::packUnorm4x8(glm::vec4(1, 0, 1, 1));
+    std::array<uint32_t, checkerboardSize* checkerboardSize > pixels;
+    for (int x = 0; x < checkerboardSize; x++) {
+        for (int y = 0; y < checkerboardSize; y++) {
+            pixels[y * checkerboardSize + x] = ((x % 2) ^ (y % 2)) ? magenta : black;
+        }
+    }
 }
 
 gns::rendering::Renderer::~Renderer()
@@ -95,20 +112,20 @@ void gns::rendering::Renderer::InitImGui()
     pool_info.poolSizeCount = static_cast<uint32_t>(std::size(pool_sizes));
     pool_info.pPoolSizes = pool_sizes;
 
-    _VK_CHECK(vkCreateDescriptorPool(m_device->sDevice, &pool_info, nullptr, &imguiPool), "");
+    _VK_CHECK(vkCreateDescriptorPool(m_device->GetDevice(), &pool_info, nullptr, &imguiPool), "");
 
 	Texture* texture = Object::Find<Texture>("offscreen_texture");
 
     DescriptorAllocator allocator;
 	DescriptorLayoutBuilder builder;
     builder.AddBinding(0,  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    texture->vulkanImage->setlayout = builder.Build(Device::sDevice, VK_SHADER_STAGE_FRAGMENT_BIT);
-    texture->vulkanImage->CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
-    texture->vulkanImage->texture_descriptorSet = allocator.Allocate(Device::sDevice, texture->vulkanImage->setlayout, imguiPool);
+    texture->vulkanImage.setlayout = builder.Build(m_device->GetDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
+    texture->vulkanImage.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+    texture->vulkanImage.texture_descriptorSet = allocator.Allocate(m_device->GetDevice(), texture->vulkanImage.setlayout, imguiPool);
 
     rendering::DescriptorWriter image_writer;
-    image_writer.WriteImage(0, texture->vulkanImage->imageView, texture->vulkanImage->sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    image_writer.UpdateSet(rendering::Device::sDevice, texture->vulkanImage->texture_descriptorSet);
+    image_writer.WriteImage(0, texture->vulkanImage.imageView, texture->vulkanImage.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    image_writer.UpdateSet(m_device->GetDevice(), texture->vulkanImage.texture_descriptorSet);
 
     // 2: initialize imgui library
     // this initializes the core structures of imgui
@@ -131,8 +148,8 @@ void gns::rendering::Renderer::InitImGui()
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = m_device->m_instance;
     init_info.PhysicalDevice = m_device->m_physicalDevice;
-    init_info.Device = Device::sDevice;
-    init_info.Queue = Device::sGraphicsQueue;
+    init_info.Device = m_device->GetDevice();
+    init_info.Queue = m_device->GetGraphicsQueue();
     init_info.DescriptorPool = imguiPool;
     init_info.MinImageCount = 3;
     init_info.ImageCount = 3;
@@ -153,7 +170,7 @@ void gns::rendering::Renderer::InitImGui()
     // add the destroy the imgui created structures
     m_device->m_deletionQueue.Push([=]() {
         ImGui_ImplVulkan_Shutdown();
-        vkDestroyDescriptorPool(m_device->sDevice, imguiPool, nullptr);
+        vkDestroyDescriptorPool(m_device->GetDevice(), imguiPool, nullptr);
         });
 }
 
@@ -280,24 +297,23 @@ void gns::rendering::Renderer::Draw()
         Texture* texture = Object::Find<Texture>("offscreen_texture");
 
         
-        texture->vulkanImage->Destroy();
-        texture->vulkanImage = new VulkanImage();
-        texture->vulkanImage->CreateImage({ m_device->m_screen->width, m_device->m_screen->height, 1}
+        texture->vulkanImage.Destroy();
+        texture->vulkanImage = VulkanImage::Create(*m_device, { m_device->m_screen->width, m_device->m_screen->height, 1}
             , VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 
 
         DescriptorLayoutBuilder builder;
         builder.AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        texture->vulkanImage->setlayout = builder.Build(Device::sDevice, VK_SHADER_STAGE_FRAGMENT_BIT);
+        texture->vulkanImage.setlayout = builder.Build(m_device->GetDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
 
         DescriptorAllocator allocator;
-        texture->vulkanImage->CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
-        texture->vulkanImage->texture_descriptorSet = allocator.Allocate(Device::sDevice, texture->vulkanImage->setlayout, imguiPool);
+        texture->vulkanImage.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+        texture->vulkanImage.texture_descriptorSet = allocator.Allocate(m_device->GetDevice(), texture->vulkanImage.setlayout, imguiPool);
 
         rendering::DescriptorWriter image_writer;
-        image_writer.WriteImage(0, texture->vulkanImage->imageView, texture->vulkanImage->sampler, 
+        image_writer.WriteImage(0, texture->vulkanImage.imageView, texture->vulkanImage.sampler, 
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        image_writer.UpdateSet(rendering::Device::sDevice, texture->vulkanImage->texture_descriptorSet);
+        image_writer.UpdateSet(m_device->GetDevice(), texture->vulkanImage.texture_descriptorSet);
     }
 }
 
@@ -330,21 +346,77 @@ void gns::rendering::Renderer::CreateTextureDescriptorSet(Texture* texture)
 {
     DescriptorLayoutBuilder builder;
     builder.AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    texture->vulkanImage->setlayout = builder.Build(Device::sDevice, VK_SHADER_STAGE_FRAGMENT_BIT);
-    texture->vulkanImage->texture_descriptorSet = m_device->m_globalDescriptorAllocator.Allocate(Device::sDevice, texture->vulkanImage->setlayout);
+    texture->vulkanImage.setlayout = builder.Build(m_device->GetDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
+    texture->vulkanImage.texture_descriptorSet = m_device->m_globalDescriptorAllocator.Allocate(m_device->GetDevice(), texture->vulkanImage.setlayout);
 
 }
 
 void gns::rendering::Renderer::UpdateTextureDescriptorSet(Texture* texture)
 {
     DescriptorWriter writer;
-    writer.WriteImage(0, texture->vulkanImage->imageView, texture->vulkanImage->sampler,
+    writer.WriteImage(0, texture->vulkanImage.imageView, texture->vulkanImage.sampler,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    writer.UpdateSet(Device::sDevice, texture->vulkanImage->texture_descriptorSet);
+    writer.UpdateSet(m_device->GetDevice(), texture->vulkanImage.texture_descriptorSet);
 }
 
 void gns::rendering::Renderer::WaitForGPUIddle()
 {
-	vkDeviceWaitIdle(Device::sDevice);
+	vkDeviceWaitIdle(m_device->GetDevice());
+}
+
+gns::rendering::VulkanBuffer gns::rendering::Renderer::CreateUniformBuffer(uint32_t size)
+{
+    return VulkanBuffer::Create(
+        m_device->GetAllocator(),
+        size,
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VMA_MEMORY_USAGE_CPU_TO_GPU,
+        VMA_ALLOCATION_CREATE_MAPPED_BIT
+    );
+}
+
+gns::rendering::VulkanBuffer gns::rendering::Renderer::CreateStagingBuffer(uint32_t size)
+{
+    return VulkanBuffer::Create(
+        m_device->GetAllocator(),
+        size,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VMA_MEMORY_USAGE_CPU_ONLY,
+        VMA_ALLOCATION_CREATE_MAPPED_BIT
+    );
+}
+
+gns::rendering::VulkanBuffer gns::rendering::Renderer::CreateIndexBuffer(uint32_t size)
+{
+    return VulkanBuffer::Create(
+        m_device->GetAllocator(),
+        size,
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VMA_MEMORY_USAGE_GPU_ONLY
+    );
+}
+
+gns::rendering::VulkanBuffer gns::rendering::Renderer::CreateVertexBuffer(uint32_t size)
+{
+    return VulkanBuffer::Create(
+        m_device->GetAllocator(),
+        size,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VMA_MEMORY_USAGE_GPU_ONLY
+    );
+}
+
+gns::rendering::VulkanImage gns::rendering::Renderer::CreateImage(void* data, VkExtent3D size, VkFormat format,
+	VkImageUsageFlags usage)
+{
+    return VulkanImage::Create( data,*m_device,  size, format, usage, false);
+}
+
+gns::rendering::VulkanImage gns::rendering::Renderer::CreateImage(VkExtent3D size, VkFormat format,
+    VkImageUsageFlags usage)
+{
+    return VulkanImage::Create(*m_device, size, format, usage, false);
 }
 

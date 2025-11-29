@@ -135,7 +135,7 @@ void gns::editor::gui::ContentBrowser::InitWindow()
 	currentSelectedEntry = &rootEntry;
 	render_system = SystemsManager::GetSystem<RenderSystem>();
 	texture = render_system->CreateTexture(PathManager::FromResourcesRelative(R"(EditorResources\Icons.png)"));
-	texture->vulkanImage->CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+	texture->vulkanImage.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
 	render_system->CreateTextureDescriptor(texture);
 	render_system->UpdateTextureDescriptor(texture);
 }
@@ -263,7 +263,7 @@ void gns::editor::gui::ContentBrowser::DrawContentView(DirectoryEntry& entry)
 			}
 		}
 		const float inner_button_size = ImGui::GetContentRegionAvail().x;
-		if (ImGui::ImageButton("##",reinterpret_cast<ImTextureID>(texture->vulkanImage->texture_descriptorSet), 
+		if (ImGui::ImageButton("##",reinterpret_cast<ImTextureID>(texture->vulkanImage.texture_descriptorSet), 
 			{ button_sz.x - 20, button_sz.y - 30 }, spriteSheet[spriteIndex].top_left, spriteSheet[spriteIndex].bottom_Right))
 		{
 			if (entry.content[i].isDirectory)

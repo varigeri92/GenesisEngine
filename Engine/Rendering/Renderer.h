@@ -82,5 +82,18 @@ namespace gns::rendering
 		void UploadMesh(Mesh* mesh) const;
 		void CreateTextureDescriptorSet(Texture* texture);
 		void UpdateTextureDescriptorSet(Texture* texture);
+
+
+		VulkanBuffer CreateUniformBuffer(uint32_t size);
+		VulkanBuffer CreateStagingBuffer(uint32_t size);
+		VulkanBuffer CreateIndexBuffer(uint32_t size);
+		VulkanBuffer CreateVertexBuffer(uint32_t size);
+
+		VulkanImage CreateImage(
+			void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
+
+		VulkanImage CreateImage(
+			VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
+
 	};
 }

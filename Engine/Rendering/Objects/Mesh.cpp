@@ -8,8 +8,8 @@ indices({}), positions({}), normals({}), uvs({}), colors({})
 
 gns::rendering::Mesh::~Mesh()
 {
-	DrawData.vertexBuffer->Destroy();
-	DrawData.indexBuffer->Destroy();
+	DrawData.vertexBuffer.Destroy();
+	DrawData.indexBuffer.Destroy();
 }
 
 void gns::rendering::Mesh::Dispose()
