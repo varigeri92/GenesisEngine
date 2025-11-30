@@ -148,6 +148,11 @@ void gns::RenderSystem::UploadMesh(rendering::Mesh* mesh)
 {
     m_renderer->UploadMesh(mesh);
 }
+
+ImTextureID gns::RenderSystem::GetImGuiTexture(TextureHandle handle)
+{
+    return  reinterpret_cast<ImTextureID>(m_renderer->GetTexture(handle).descriptorSet);
+}
 #pragma endregion
 
 void gns::RenderSystem::InitSystem()
@@ -204,6 +209,11 @@ gns::RenderSystem::RenderSystem(Screen* screen)
 gns::rendering::Texture* gns::RenderSystem::GetRenderTargetTexture()
 {
     return m_offScreenRenderTargetTexture;
+}
+
+ImTextureID gns::RenderSystem::GetRenderTargetTextureID()
+{
+	return GetImGuiTexture(m_offScreenRenderTargetTexture->handle);
 }
 
 Screen* gns::RenderSystem::GetTargetScren()

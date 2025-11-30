@@ -146,11 +146,9 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
     InitVulkan();
     CreateSwapchain();
     offscreen_Texture = Object::Create<Texture>("offscreen_texture");
-    offscreen_Texture->vulkanImage = VulkanImage::Create(
-        *this,
-        m_renderTargetImage.imageExtent, 
-        VK_FORMAT_R8G8B8A8_UNORM, 
+    auto[handle, textureData] = CreateTexture(m_renderTargetImage.imageExtent, VK_FORMAT_R8G8B8A8_UNORM,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+    offscreen_Texture->handle = handle;
 
     InitCommands();
     InitSyncStructures();
@@ -787,8 +785,9 @@ void gns::rendering::Device::UpdateMaterialData(VkDescriptorSet& set, Material& 
     image_writer.WriteBuffer(0, material.buffer.buffer, material.buffer.bufferSize, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     for(size_t i = 0; i<material.textures.size(); i++)
     {
-	    const VulkanImage* vulkanImage = &(material.textures[i]->vulkanImage);
-		image_writer.WriteImage(i+1, vulkanImage->imageView, vulkanImage->sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        const VulkanTexture& vkTexture = GetTexture(material.textures[i]->handle);
+    	const VulkanImage& vulkanImage = (vkTexture.image);
+		image_writer.WriteImage(i+1, vulkanImage.imageView, vkTexture.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     }
     image_writer.UpdateSet(m_device, set);
 }
@@ -830,10 +829,10 @@ void gns::rendering::Device::Draw(
 	utils::TransitionImage(cmd, m_images[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     utils::CopyImageToImage(cmd, m_renderTargetImage.image, m_images[swapchainImageIndex], drawExtent, m_swapchainExtent);
-
-    utils::TransitionImage(cmd, offscreen_Texture->vulkanImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    utils::CopyImageToImage(cmd, m_renderTargetImage.image, offscreen_Texture->vulkanImage.image, drawExtent, drawExtent);
-    utils::TransitionImage(cmd, offscreen_Texture->vulkanImage.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    VulkanTexture& vkTexture = GetTexture(offscreen_Texture->handle);
+    utils::TransitionImage(cmd, vkTexture.image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    utils::CopyImageToImage(cmd, m_renderTargetImage.image, vkTexture.image.image, drawExtent, drawExtent);
+    utils::TransitionImage(cmd, vkTexture.image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 	DrawImGui(cmd, m_imageViews[swapchainImageIndex]);
     utils::TransitionImage(cmd, m_images[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -1027,5 +1026,39 @@ uint32_t gns::rendering::Device::GetMemoryType(
     {
         throw std::runtime_error("Could not find a matching memory type");
     }
+}
+
+gns::rendering::VulkanTexture& gns::rendering::Device::GetTexture(TextureHandle handle)
+{
+    if(!handle.IsValid())
+        return resources.textures[{TextureHandle::Invalid}];
+
+    auto it = resources.textures.find(handle);
+    if (it != resources.textures.end()) {
+        return it->second;
+    }
+    else {
+        return resources.textures[{TextureHandle::Invalid}];
+    }
+}
+
+std::tuple<TextureHandle, gns::rendering::VulkanTexture&> gns::rendering::Device::CreateTexture(void* data,
+	VkExtent3D extent, VkFormat format, VkImageUsageFlags usage)
+{
+    TextureHandle handle{ resources.textureCounter++ };
+    auto [it, inserted] = resources.textures.try_emplace(
+        handle, data, *this, extent, format, usage);
+
+	return { handle, resources.textures[handle] };
+}
+
+std::tuple<TextureHandle, gns::rendering::VulkanTexture&> gns::rendering::Device::CreateTexture(VkExtent3D extent,
+	VkFormat format, VkImageUsageFlags usage)
+{
+    TextureHandle handle{ resources.textureCounter++ };
+    auto [it, inserted] = resources.textures.try_emplace(
+        handle, *this, extent, format, usage);
+
+    return { handle, resources.textures[handle] };
 }
 

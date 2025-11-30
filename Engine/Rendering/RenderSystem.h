@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "imgui.h"
 #include "../ECS/Component.h"
 #include "glm/glm.hpp"
 
@@ -42,6 +43,7 @@ namespace gns
 		RenderSystem(Screen* screen);
 
 		GNS_API rendering::Texture* GetRenderTargetTexture();
+		GNS_API ImTextureID GetRenderTargetTextureID();
 		GNS_API Screen* GetTargetScren();
 		GNS_API void SetTargetScreenSize(uint32_t width, uint32_t height);
 
@@ -71,7 +73,7 @@ namespace gns
 
 		GNS_API void ResetMaterialTextures(rendering::Material* material);
 		GNS_API void UploadMesh(rendering::Mesh* mesh);
-
+		GNS_API ImTextureID GetImGuiTexture(TextureHandle handle);
 		rendering::Renderer* GetRenderer() const { return m_renderer; };
 		void InitSystem() override;
 		void UpdateSystem(const float deltaTime) override;

@@ -1,6 +1,9 @@
 ﻿#include "gnspch.h"
 #include <vma/vk_mem_alloc.h>
 #include "VulkanObjects.h"
+
+#include <algorithm>
+
 #include "../Device.h"
 
 gns::rendering::VulkanBuffer::VulkanBuffer()
@@ -101,9 +104,6 @@ gns::rendering::VulkanImage::VulkanImage()
 	allocation = VK_NULL_HANDLE;
 	imageExtent = { 0,0,1 };
 	imageFormat = VK_FORMAT_UNDEFINED;
-	sampler = VK_NULL_HANDLE;
-	texture_descriptorSet = VK_NULL_HANDLE;
-	setlayout = VK_NULL_HANDLE;
 }
 
 gns::rendering::VulkanImage::~VulkanImage()
@@ -128,10 +128,7 @@ gns::rendering::VulkanImage& gns::rendering::VulkanImage::operator=(VulkanImage&
 		allocation = other.allocation;
 		imageExtent = other.imageExtent;
 		imageFormat = other.imageFormat;
-		sampler = other.sampler;
-		texture_descriptorSet = other.texture_descriptorSet;
-		setlayout = other.setlayout;
-
+		
 		other.queue = VK_NULL_HANDLE;
 		other.vkDevice = VK_NULL_HANDLE;
 		other.allocator = VK_NULL_HANDLE;
@@ -140,9 +137,6 @@ gns::rendering::VulkanImage& gns::rendering::VulkanImage::operator=(VulkanImage&
 		other.allocation = VK_NULL_HANDLE;
 		other.imageExtent = {};
 		other.imageFormat = VK_FORMAT_UNDEFINED;
-		other.sampler = VK_NULL_HANDLE;
-		other.texture_descriptorSet = VK_NULL_HANDLE;
-		other.setlayout = VK_NULL_HANDLE;
 	}
 	return *this;
 }
@@ -240,18 +234,6 @@ void gns::rendering::VulkanImage::CreateImage(void* data, VkExtent3D size, VkFor
 		});
 }
 
-void gns::rendering::VulkanImage::CreateSampler(VkFilter filter, VkSamplerAddressMode mode)
-{
-	if(vkDevice == VK_NULL_HANDLE)
-	{
-		LOG_ERROR("Trying to create Sampler, ut devise is invalid or destroyed!");
-		return;
-	}
-
-	VkSamplerCreateInfo samplerInfo = utils::SamplerCreateInfo(filter, mode);
-	vkCreateSampler(vkDevice, &samplerInfo, nullptr, &sampler);
-	hasSampler = true;
-}
 
 void gns::rendering::VulkanImage::Destroy()
 {
@@ -262,19 +244,58 @@ void gns::rendering::VulkanImage::Destroy()
 	if(image != VK_NULL_HANDLE)
 		vmaDestroyImage(allocator, image, allocation);
 
-	if (hasSampler && sampler != VK_NULL_HANDLE)
-		vkDestroySampler(vkDevice, sampler, nullptr);
-
-
 	image = VK_NULL_HANDLE;
 	imageView = VK_NULL_HANDLE;
 	allocation = VK_NULL_HANDLE;
 	imageExtent = { 0,0,1 };
 	imageFormat = VK_FORMAT_UNDEFINED;
-	sampler = VK_NULL_HANDLE;
-	texture_descriptorSet = VK_NULL_HANDLE;
-	setlayout = VK_NULL_HANDLE;
 
+}
+
+
+gns::rendering::VulkanTexture::VulkanTexture(Device& device, VkExtent3D size, VkFormat format, VkImageUsageFlags usage)
+{
+	image = VulkanImage::Create(device, size, format, usage);
+	CreateDefaultSampler();
+}
+
+gns::rendering::VulkanTexture::VulkanTexture(void* data, Device& device, VkExtent3D size, VkFormat format, VkImageUsageFlags usage)
+{
+	image = VulkanImage::Create(data, device, size, format, usage);
+	CreateDefaultSampler();
+}
+
+gns::rendering::VulkanTexture::VulkanTexture()
+{
+	LOG_INFO("VulkanTexture Default constuctor called!");
+}
+
+gns::rendering::VulkanTexture::~VulkanTexture()
+{
+	image.Destroy();
+}
+
+void gns::rendering::VulkanTexture::CreateSampler(VkFilter filter, VkSamplerAddressMode mode)
+{
+	VkSamplerCreateInfo samplerInfo = utils::SamplerCreateInfo(filter, mode);
+	vkCreateSampler(image.vkDevice, &samplerInfo, nullptr, &sampler);
+}
+
+void gns::rendering::VulkanTexture::CreateDefaultSampler()
+{
+	CreateSampler(filter, samplerMode);
+}
+
+void gns::rendering::VulkanTexture::Destroy()
+{
+
+	if (sampler != VK_NULL_HANDLE)
+		vkDestroySampler(image.vkDevice, sampler, nullptr);
+
+	sampler = VK_NULL_HANDLE;
+	descriptorSet = VK_NULL_HANDLE;
+	setLayout = VK_NULL_HANDLE;
+	image.Destroy();
 }
 
 void gns::rendering::VulkanShader::Destroy()
@@ -283,3 +304,4 @@ void gns::rendering::VulkanShader::Destroy()
 	vkDestroyPipeline(device, m_pipeline, nullptr);
 	vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr);
 }
+

@@ -22,7 +22,7 @@ gns::editor::gui::SceneView::SceneView()
 {
 	m_flags = ImGuiWindowFlags_NoMove;
 	m_renderSystem = SystemsManager::GetSystem<RenderSystem>();
-	m_renderTexture = reinterpret_cast<ImTextureID>(m_renderSystem->GetRenderTargetTexture()->vulkanImage.texture_descriptorSet);
+	m_renderTexture = m_renderSystem->GetRenderTargetTextureID();
 	m_screen = m_renderSystem->GetTargetScren();
 	m_lastFrameRender_Width = 0;
 	m_lastFrameRender_Height = 0;
@@ -66,14 +66,14 @@ void gns::editor::gui::SceneView::OnWindowDraw()
 
 		m_screen->width = m_lastFrameRender_Width;
 		m_screen->height = m_lastFrameRender_Height;
-		m_renderTexture = reinterpret_cast<ImTextureID>(m_renderSystem->GetRenderTargetTexture()->vulkanImage.texture_descriptorSet);
+		m_renderTexture = m_renderSystem->GetRenderTargetTextureID();
 		m_screen->aspectRatio = m_drawRegion.x / m_drawRegion.y;
 	}
 
 
 	if(m_screen->updateRenderTargetTarget)
 	{
-		m_renderTexture = reinterpret_cast<ImTextureID>(m_renderSystem->GetRenderTargetTexture()->vulkanImage.texture_descriptorSet);
+		m_renderTexture = m_renderSystem->GetRenderTargetTextureID();
 		m_screen->updateRenderTargetTarget = false;
 	}
 	ImGui::Image(m_renderTexture, m_drawRegion);

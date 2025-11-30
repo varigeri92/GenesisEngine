@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "glm/glm.hpp"
 #include "../../Object/Object.h"
+#include "../Handles/TextureHandle.h"
 #include "../vulkan/Utils/VulkanObjects.h"
 namespace gns::rendering
 {
@@ -30,7 +31,8 @@ namespace gns::rendering
 		uint32_t width;
 		uint32_t height;
 		uint32_t mipLevels = 0;
-		VulkanImage vulkanImage;
+
+		TextureHandle handle;
 
 	private:
 		bool keepData;

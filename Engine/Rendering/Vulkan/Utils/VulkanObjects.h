@@ -43,9 +43,6 @@ namespace gns::rendering
 
 	struct VulkanImage
 	{
-	private:
-		bool hasSampler = false;
-	public:
 		VulkanImage();
 		~VulkanImage();
 
@@ -62,10 +59,11 @@ namespace gns::rendering
 		VmaAllocation allocation{ VK_NULL_HANDLE };
 		VkExtent3D imageExtent{ 0, 0, 1};
 		VkFormat imageFormat {VK_FORMAT_UNDEFINED};
-
+		/*
 		VkSampler sampler {VK_NULL_HANDLE};
 		VkDescriptorSet texture_descriptorSet{ VK_NULL_HANDLE };
 		VkDescriptorSetLayout setlayout{ VK_NULL_HANDLE };
+		*/
 		VkQueue queue{ VK_NULL_HANDLE };
 
 		static VulkanImage Create(
@@ -91,6 +89,31 @@ namespace gns::rendering
 			VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
 		void CreateImage(void* data, VkExtent3D size,
 			VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+	};
+
+	struct VulkanTexture
+	{
+		VulkanImage image {};
+		VkSampler sampler{ VK_NULL_HANDLE };
+		VkFilter filter{ VK_FILTER_LINEAR };
+		VkSamplerAddressMode samplerMode{ VK_SAMPLER_ADDRESS_MODE_REPEAT };
+
+		VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
+		VkDescriptorSetLayout setLayout{ VK_NULL_HANDLE };
+
+		VulkanTexture(Device& device, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
+		VulkanTexture(void* data, Device& device, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
+		VulkanTexture();
+		~VulkanTexture();
+
+		VulkanTexture(VulkanTexture&& other) = delete;
+		VulkanTexture(const VulkanTexture&) = delete;
+		VulkanTexture& operator=(const VulkanTexture&) = delete;
+		VulkanTexture& operator=(VulkanTexture&& other) = delete;
+
+		void Destroy();
+		void CreateSampler(VkFilter filter, VkSamplerAddressMode mode);
+		void CreateDefaultSampler();
 	};
 
 	struct VulkanShader

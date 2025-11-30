@@ -5,6 +5,7 @@
 #include <span>
 #include "Utils/vkutils.h"
 #include "VkBootstrap.h"
+#include "../Handles/TextureHandle.h"
 #include "Utils/VulkanObjects.h"
 #include "Utils/VkDescriptors.h"
 
@@ -82,6 +83,12 @@ namespace gns::rendering
 		VkCommandPool _immCommandPool;
 	};
 
+	struct Resources
+	{
+		size_t textureCounter{0};
+		std::unordered_map<TextureHandle, VulkanTexture> textures;
+	};
+
 	class Device
 	{
 		friend class gns::RenderSystem;
@@ -104,6 +111,13 @@ namespace gns::rendering
 		VkDevice GetDevice() { return m_device; }
 		VmaAllocator GetAllocator() { return m_allocator; }
 		VkQueue GetGraphicsQueue() { return m_graphicsQueue; }
+		VulkanTexture& GetTexture(TextureHandle handle);
+		std::tuple<TextureHandle, VulkanTexture&> CreateTexture(
+			void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
+
+		std::tuple<TextureHandle, gns::rendering::VulkanTexture&> CreateTexture(
+			VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
+
 
 	private:
 		Screen* m_screen;
@@ -120,7 +134,7 @@ namespace gns::rendering
 		VulkanBuffer m_gpuSceneDataBuffer;
 
 		Texture* offscreen_Texture;
-
+		Resources resources;
 		// ------------------
 
 		vkb::Instance m_vkb_instance;
@@ -222,6 +236,5 @@ namespace gns::rendering
 
 		uint32_t GetMemoryType(uint32_t typeBits,
 			VkMemoryPropertyFlags properties, VkBool32* memTypeFound = nullptr) const;
-		
 	};
 }
