@@ -116,6 +116,31 @@ namespace gns::rendering
 		void CreateDefaultSampler();
 	};
 
+	struct VulkanMesh
+	{
+		VulkanBuffer indexBuffer{};
+		VulkanBuffer vertexBuffer{};
+		VkDeviceAddress vertexBufferAddress {0};
+
+		VkIndexType indexType{VK_INDEX_TYPE_UINT32};
+		VkPrimitiveTopology topology{VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST};
+
+		struct IndexBufferRange {
+			uint32_t startIndex{0};
+			uint32_t count{0};
+		} indexBufferRange = {};
+
+		VulkanMesh() = default;
+		~VulkanMesh() = default;
+
+		VulkanMesh(VulkanMesh&& other) = delete;
+		VulkanMesh(const VulkanMesh&) = delete;
+		VulkanMesh& operator=(const VulkanMesh&) = delete;
+		VulkanMesh& operator=(VulkanMesh&& other) = delete;
+
+		void Destroy();
+	};
+
 	struct VulkanShader
 	{
 		friend class Device;
@@ -137,12 +162,6 @@ namespace gns::rendering
 		glm::vec4 biTangent;
 	};
 
-	struct VulkanMesh
-	{
-		VulkanBuffer indexBuffer;
-		VulkanBuffer vertexBuffer;
-		VkDeviceAddress vertexBufferAddress;
-	};
 
 	struct PushConstants {
 		glm::mat4 worldMatrix;

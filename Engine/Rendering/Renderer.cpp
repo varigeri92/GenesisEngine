@@ -221,8 +221,9 @@ void gns::rendering::Renderer::BuildDrawData()
         {
 	        objectIndices.push_back(index);
             Mesh* mesh = meshComponent.meshes[i];
+            VulkanMesh& vkMesh = m_device->GetMesh(meshComponent.meshes[i]->handle);
             Material* material = meshComponent.materials[i];
-	        objects.emplace_back(transform.matrix, mesh->DrawData.vertexBufferAddress, transform.position);
+	        objects.emplace_back(transform.matrix, vkMesh.vertexBufferAddress, transform.position);
             meshes.push_back(mesh);
             materials.push_back(material);
 	        m_device->UpdateUniformBuffer(&material->uniformData, material->buffer);
@@ -323,8 +324,9 @@ void gns::rendering::Renderer::Draw()
     }
 }
 
-void gns::rendering::Renderer::UploadMesh(Mesh* mesh) const
+void gns::rendering::Renderer::UploadMesh(Mesh* mesh, uint32_t startIndex, uint32_t count) const
 {
+    mesh->handle = m_device->CreateMesh();
 	std::vector<Vertex> vertices = {};
 	vertices.resize(mesh->positions.size());
 	for (size_t i = 0; i<mesh->positions.size(); i++)
@@ -337,7 +339,11 @@ void gns::rendering::Renderer::UploadMesh(Mesh* mesh) const
         vertices[i].tangent = { mesh->tangents[i],0 };
         vertices[i].biTangent = { mesh->biTangents[i],0 };
 	}
-	m_device->UploadMesh(mesh->indices, vertices, mesh->DrawData);
+    VulkanMesh& vkMesh = m_device->GetMesh(mesh->handle);
+    vkMesh.indexBufferRange.startIndex = startIndex;
+    vkMesh.indexBufferRange.count = count;
+	m_device->UploadMesh(mesh->indices, vertices, vkMesh);
+
 	if(!mesh->keepCPU_Data)
 	{
 		mesh->indices.clear();

@@ -72,7 +72,7 @@ namespace gns
 		GNS_API rendering::Material* GetMaterial(const std::string& name);
 
 		GNS_API void ResetMaterialTextures(rendering::Material* material);
-		GNS_API void UploadMesh(rendering::Mesh* mesh);
+		GNS_API void UploadMesh(rendering::Mesh* mesh, uint32_t startIndex, uint32_t count);
 		GNS_API ImTextureID GetImGuiTexture(TextureHandle handle);
 		rendering::Renderer* GetRenderer() const { return m_renderer; };
 		void InitSystem() override;

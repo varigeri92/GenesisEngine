@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "glm/glm.hpp"
 #include "../../Object/Object.h"
-#include "../Handles/TextureHandle.h"
+#include "../Handles/Handles.h"
 #include "../vulkan/Utils/VulkanObjects.h"
 namespace gns::rendering
 {

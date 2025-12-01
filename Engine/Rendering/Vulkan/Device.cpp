@@ -860,7 +860,7 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
         size_t objectIndex = indices[i];
         Material* material = materials[i];
         Mesh* mesh = meshes[i];
-
+        VulkanMesh& vkMesh = GetMesh(mesh->handle);
         if (material->shader != m_currentBoundShader)
         {
 		    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material->shader->shader.m_pipeline);
@@ -887,10 +887,9 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
 
         vkCmdPushConstants(cmd, material->shader->shader.m_pipelineLayout,
             VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
-        vkCmdBindIndexBuffer(cmd, mesh->DrawData.indexBuffer.buffer,
-            0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(cmd, mesh->indexBufferRange.count,
-            1, mesh->indexBufferRange.startIndex, 0, objectIndex);
+        vkCmdBindIndexBuffer(cmd, vkMesh.indexBuffer.buffer, 0, vkMesh.indexType);
+        vkCmdDrawIndexed(cmd, vkMesh.indexBufferRange.count,
+            1, vkMesh.indexBufferRange.startIndex, 0, objectIndex);
     }
     vkCmdEndRendering(cmd);
 }
@@ -957,7 +956,6 @@ void gns::rendering::Device::UploadMesh(std::span<uint32_t> indices, std::span<V
     const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
     const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
-    vulkanMesh = {};
     vulkanMesh.indexBuffer = VulkanBuffer::Create(m_allocator, indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VMA_MEMORY_USAGE_GPU_ONLY);
 
@@ -1031,14 +1029,14 @@ uint32_t gns::rendering::Device::GetMemoryType(
 gns::rendering::VulkanTexture& gns::rendering::Device::GetTexture(TextureHandle handle)
 {
     if(!handle.IsValid())
-        return resources.textures[{TextureHandle::Invalid}];
+        return resources.textures[{Handle::Invalid}];
 
     auto it = resources.textures.find(handle);
     if (it != resources.textures.end()) {
         return it->second;
     }
     else {
-        return resources.textures[{TextureHandle::Invalid}];
+        return resources.textures[{Handle::Invalid}];
     }
 }
 
@@ -1060,5 +1058,27 @@ std::tuple<TextureHandle, gns::rendering::VulkanTexture&> gns::rendering::Device
         handle, *this, extent, format, usage);
 
     return { handle, resources.textures[handle] };
+}
+
+gns::rendering::VulkanMesh& gns::rendering::Device::GetMesh(MeshHandle handle)
+{
+    if (!handle.IsValid())
+        return resources.meshes[{Handle::Invalid}];
+
+    auto it = resources.meshes.find(handle);
+    if (it != resources.meshes.end()) {
+        return it->second;
+    }
+    else {
+        return resources.meshes[{Handle::Invalid}];
+    }
+}
+
+MeshHandle gns::rendering::Device::CreateMesh()
+{
+    MeshHandle handle{ resources.meshCounter++ };
+	auto [it, inserted] = resources.meshes.try_emplace(handle);
+
+    return handle ;
 }
 

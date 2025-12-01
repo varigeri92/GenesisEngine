@@ -5,7 +5,7 @@
 #include <span>
 #include "Utils/vkutils.h"
 #include "VkBootstrap.h"
-#include "../Handles/TextureHandle.h"
+#include "../Handles/Handles.h"
 #include "Utils/VulkanObjects.h"
 #include "Utils/VkDescriptors.h"
 
@@ -87,6 +87,9 @@ namespace gns::rendering
 	{
 		size_t textureCounter{0};
 		std::unordered_map<TextureHandle, VulkanTexture> textures;
+
+		size_t meshCounter{0};
+		std::unordered_map<MeshHandle, VulkanMesh> meshes;
 	};
 
 	class Device
@@ -111,13 +114,17 @@ namespace gns::rendering
 		VkDevice GetDevice() { return m_device; }
 		VmaAllocator GetAllocator() { return m_allocator; }
 		VkQueue GetGraphicsQueue() { return m_graphicsQueue; }
+
 		VulkanTexture& GetTexture(TextureHandle handle);
+
 		std::tuple<TextureHandle, VulkanTexture&> CreateTexture(
 			void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
 
 		std::tuple<TextureHandle, gns::rendering::VulkanTexture&> CreateTexture(
 			VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
 
+		VulkanMesh& GetMesh(MeshHandle handle);
+		MeshHandle CreateMesh();
 
 	private:
 		Screen* m_screen;

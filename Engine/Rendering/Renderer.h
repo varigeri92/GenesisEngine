@@ -79,7 +79,7 @@ namespace gns::rendering
 
 	public:
 		void Draw();
-		void UploadMesh(Mesh* mesh) const;
+		void UploadMesh(Mesh* mesh, uint32_t startIndex, uint32_t count) const;
 		void CreateTextureDescriptorSet(Texture* texture);
 		void UpdateTextureDescriptorSet(Texture* texture);
 

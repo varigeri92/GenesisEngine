@@ -144,9 +144,9 @@ void gns::RenderSystem::ResetMaterialTextures(rendering::Material* material)
     material->textures[4] = emissionTexture;
 }
 
-void gns::RenderSystem::UploadMesh(rendering::Mesh* mesh)
+void gns::RenderSystem::UploadMesh(rendering::Mesh* mesh, uint32_t startIndex, uint32_t count)
 {
-    m_renderer->UploadMesh(mesh);
+    m_renderer->UploadMesh(mesh, startIndex, count);
 }
 
 ImTextureID gns::RenderSystem::GetImGuiTexture(TextureHandle handle)

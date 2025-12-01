@@ -158,7 +158,8 @@ void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const s
                 newMesh->biTangents.push_back({ mesh->mBitangents[v].x, mesh->mBitangents[v].y, mesh->mBitangents[v].z });
             }
         }
-        newMesh->indexBufferRange.startIndex = static_cast<uint32_t>(newMesh->indices.size());
+        const uint32_t startindex = newMesh->indices.size();
+        //newMesh->indexBufferRange.startIndex = static_cast<uint32_t>(newMesh->indices.size());
         for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
             const aiFace& Face = mesh->mFaces[i];
             for (uint32_t i = 0; i < Face.mNumIndices; i++)
@@ -167,8 +168,9 @@ void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const s
                 newMesh->indices.push_back(vi);
             }
         }
-        newMesh->indexBufferRange.count = static_cast<uint32_t>(newMesh->indices.size());
-        renderSystem->UploadMesh(newMesh);
+        //newMesh->indexBufferRange.count = static_cast<uint32_t>(newMesh->indices.size());
+        const uint32_t count = static_cast<uint32_t>(newMesh->indices.size());
+        renderSystem->UploadMesh(newMesh, startindex, count);
     }
     onLoadSuccess_callback(loaded_MeshGuids, loaded_materialGuids);
 }

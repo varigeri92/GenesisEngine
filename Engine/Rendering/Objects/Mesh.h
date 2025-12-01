@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "glm/glm.hpp"
 #include "../../Object/Object.h"
+#include "../Handles/Handles.h"
 #include "../Vulkan/Utils/VulkanObjects.h"
 
 namespace gns::rendering
@@ -20,15 +21,10 @@ namespace gns::rendering
 		std::vector<glm::vec3> tangents = {};
 		std::vector<glm::vec3> biTangents = {};
 
-		VulkanMesh DrawData;
-
-		struct IndexBufferRange {
-			uint32_t startIndex;
-			uint32_t count;
-		} indexBufferRange = {};
+		MeshHandle handle;
 
 	protected:
-		//Do not use Allocate this object! Use Object::Create<Mesh>(name) instead!
+		//Use Object::Create<Mesh>(name) instead!
 		Mesh(std::string name);
 	};
 }
