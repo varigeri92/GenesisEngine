@@ -5,7 +5,7 @@
 #include "../GUI/GuiWindow.h"
 
 std::vector<gns::gui::GuiWindow*> gns::GuiWindowDrawer::GuiWindows = {};
-
+bool show_imgui_demo_window = false;
 void gns::GuiWindowDrawer::DrawWindows()
 {
 
@@ -19,6 +19,6 @@ void gns::GuiWindowDrawer::DrawWindows()
 		}
 		guiWindow->OnWindowEnd();
 	}
-
-	ImGui::ShowDemoWindow();
+	if(show_imgui_demo_window)
+		ImGui::ShowDemoWindow();
 }

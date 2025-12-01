@@ -9,16 +9,17 @@ namespace gns::scene
 	struct Scene;
 }
 
-namespace gns::editor::serialization
+namespace gns::serialization
 {
 	class SceneSerializer
 	{
 	public:
-		SceneSerializer() =default;
+		SceneSerializer() = default;
 		~SceneSerializer() = default;
 		GNS_API bool SaveScene(const std::string& outFilePath);
 		GNS_API std::string SerializeScene(scene::Scene* scene);
 		GNS_API scene::Scene* DeserializeScene(const std::string& sceneFilePath);
 
+		static void RegisterTable();
 	};
 }

@@ -1,6 +1,7 @@
 ﻿#include "gnspch.h"
 #include "Engine.h"
 #include "AssetDatabase/AssetLoader.h"
+#include "AssetDatabase/Serializer/SceneSerializer.h"
 #include "Utils/Time.h"
 #include "Window/Window.h"
 #include "Input/InputBackend.h"
@@ -35,6 +36,8 @@ namespace gns
 		REGISTER_COMPONENT(rendering::SpotLightComponent);
 		REGISTER_COMPONENT(rendering::ColorComponent);
 
+
+		serialization::SceneSerializer::RegisterTable();
 		defaultScreen = new Screen{1920, 1080, 1.f, ((float)1920/(float)1080), false, true};
 		m_mainWindow = SystemsManager::RegisterSystem<WindowSystem>(tittle, defaultScreen);
 		SystemsManager::RegisterSystem<TransformSystem>();

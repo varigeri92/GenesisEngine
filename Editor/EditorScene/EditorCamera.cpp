@@ -8,7 +8,7 @@
 
 void gns::editor::scene::EditorCamera::InitSystem()
 {
-	m_transform.position = { 0,0,8 };
+	m_transform.position = { 0,0,-8 };
 	m_camera = { 60.f, 0.01f, 1000.f };
 	m_cameraSpeed = 5;
 	RenderSystem* renderSystem = SystemsManager::GetSystem<RenderSystem>();

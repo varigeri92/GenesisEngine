@@ -31,14 +31,14 @@ void DockSpaceWindow::OnWindowDraw()
 		if (ImGui::BeginMenu("File")) {
 			if (ImGui::MenuItem("Save", "(Ctrl+S)"))
 			{
-				gns::editor::serialization::SceneSerializer serializer;
+				gns::serialization::SceneSerializer serializer;
 				serializer.SaveScene(PathManager::FromAssetsRelative("scene.gnsscene"));
 				LOG_INFO("Save Scene");
 			}
 
 			if (ImGui::MenuItem("Load"))
 			{
-				gns::editor::serialization::SceneSerializer serializer;
+				gns::serialization::SceneSerializer serializer;
 				serializer.DeserializeScene(PathManager::FromAssetsRelative("scene.gnsscene"));
 				LOG_INFO("Load Scene");
 			}
