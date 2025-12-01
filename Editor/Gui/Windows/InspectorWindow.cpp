@@ -197,7 +197,11 @@ void gns::editor::gui::InspectorWindow::InitWindow()
 			{
 				auto& meshComp = currentEntity.GetComponent<entity::MeshComponent>();
 				currentSelectedEntity_materials = meshComp.materials;
-				current_selected_material = currentSelectedEntity_materials[0];
+				current_selected_material = nullptr;
+				if(currentSelectedEntity_materials.size() != 0)
+				{
+					current_selected_material = currentSelectedEntity_materials[0];
+				}
 			}
 			else
 			{

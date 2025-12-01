@@ -12,8 +12,11 @@
 
 #define VERSION "0.0.0"
 using namespace gns::serialization;
+
 std::unordered_map<size_t, gns::serialization::YamlFieldSerializationEntry>
 	gns::serialization::YamlFieldSerializationEntry::yaml_table = {};
+std::unordered_map<size_t, gns::serialization::YamlComponentSerializationEntry>
+gns::serialization::YamlComponentSerializationEntry::yaml_table = {};
 
 /*
 std::unordered_map<size_t, std::function<void(const std::string& name, char* componentData, size_t offset, YAML::Emitter& out)>>
@@ -89,8 +92,6 @@ FieldDeserializer_Table
 	}
 }
 };
-*/
-
 
 std::unordered_map<size_t, std::function<void* (gns::entityHandle entity_handle)>>
 ComponentDeserializer_Table
@@ -138,11 +139,71 @@ ComponentDeserializer_Table
 		}
 	}
 };
-
-
+*/
 
 void gns::serialization::SceneSerializer::RegisterTable()
 {
+	std::function<void(const std::string& name, size_t typeId, char* componentData, YAML::Emitter& out)> serializeFn =
+		[](const std::string& name, size_t typeId, char* componentData, YAML::Emitter& out)
+		{
+			out << YAML::BeginMap << YAML::Key << "component_data" << YAML::Value << YAML::BeginMap;
+			out << YAML::Key << "cmp_name" << YAML::Value << name;
+			out << YAML::Key << "cmp_type" << YAML::Value << typeId;
+			out << YAML::Key << "cmp_fields" << YAML::Value;
+		};
+
+	YamlComponentSerializationEntry::RegisterSerializableComponent<gns::entity::Transform>(
+		serializeFn,
+		[](gns::entityHandle entity_handle, YAML::Node& value)
+		{
+			gns::Entity entity = { entity_handle };
+			auto& component = entity.GetComponent<gns::entity::Transform>();
+			return static_cast<void*>(&component);
+		}
+	);
+
+	YamlComponentSerializationEntry::RegisterSerializableComponent<gns::entity::EntityComponent>(
+		serializeFn,
+		[](gns::entityHandle entity_handle, YAML::Node& value)
+		{
+			gns::Entity entity = { entity_handle };
+			auto& component = entity.GetComponent<gns::entity::EntityComponent>();
+			return static_cast<void*>(&component);
+		});
+
+	YamlComponentSerializationEntry::RegisterSerializableComponent<gns::rendering::PointLightComponent>(
+		serializeFn,
+		[](gns::entityHandle entity_handle, YAML::Node& value)
+		{
+			gns::Entity entity = { entity_handle };
+			auto& component = entity.AddComponet<gns::rendering::PointLightComponent>();
+			return static_cast<void*>(&component);
+		});
+
+	YamlComponentSerializationEntry::RegisterSerializableComponent<gns::rendering::ColorComponent>(
+		serializeFn,
+		[](gns::entityHandle entity_handle, YAML::Node& value)
+		{
+			gns::Entity entity = { entity_handle };
+			auto& component = entity.AddComponet<gns::rendering::ColorComponent>();
+			return static_cast<void*>(&component);
+		});
+
+	YamlComponentSerializationEntry::RegisterSerializableComponent<gns::entity::MeshComponent>(
+		serializeFn,
+		[](gns::entityHandle entity_handle, YAML::Node& value)
+		{
+			gns::Entity entity = { entity_handle };
+			auto& component = entity.AddComponet<gns::entity::MeshComponent>();
+			auto* mat = SystemsManager::GetSystem<RenderSystem>()->GetMaterial("default_material");
+			component.materials.push_back(mat);
+			return static_cast<void*>(&component);
+		});
+
+	//-----------------------------------------
+	//------------ FIELDS: --------------------
+	//-----------------------------------------
+
 	YamlFieldSerializationEntry::RegisterSerializeableFiled<std::string>(
 		[](const std::string& name, char* componentData, size_t offset, YAML::Emitter& out)
 		{
@@ -178,8 +239,11 @@ void gns::serialization::SceneSerializer::RegisterTable()
 		{
 			out << YAML::Key << name
 				<< YAML::Value << *reinterpret_cast<size_t*>(componentData + offset);
-		},nullptr
-		//[](char* componentData, size_t offset, YAML::Node& value){}
+		},[](char* componentData, size_t offset, YAML::Node& value)
+		{
+				gns::guid& _value = *reinterpret_cast<gns::guid*>(componentData + offset);
+				_value = value.as<gns::guid>();
+		}
 	);
 
 	YamlFieldSerializationEntry::RegisterSerializeableFiled<bool>(
@@ -188,8 +252,12 @@ void gns::serialization::SceneSerializer::RegisterTable()
 			bool b = *reinterpret_cast<bool*>(componentData + offset);
 			out << YAML::Key << name
 				<< YAML::Value << b;
-		},nullptr
-		//[](char* componentData, size_t offset, YAML::Node& value){}
+		},
+		[](char* componentData, size_t offset, YAML::Node& value)
+		{
+				bool& _value = *reinterpret_cast<bool*>(componentData + offset);
+				_value = value.as<bool>();
+		}
 	);
 
 	YamlFieldSerializationEntry::RegisterSerializeableFiled<float>(
@@ -198,8 +266,12 @@ void gns::serialization::SceneSerializer::RegisterTable()
 			float f = *reinterpret_cast<float*>(componentData + offset);
 				out << YAML::Key << name
 				<< YAML::Value << f;
-		},nullptr
-		//[](char* componentData, size_t offset, YAML::Node& value){}
+		},
+		[](char* componentData, size_t offset, YAML::Node& value)
+		{
+			float& _value = *reinterpret_cast<float*>(componentData + offset);
+			_value = value.as<float>();
+		}
 	);
 
 	YamlFieldSerializationEntry::RegisterSerializeableFiled<gns::color4>(
@@ -208,8 +280,15 @@ void gns::serialization::SceneSerializer::RegisterTable()
 			glm::vec4 vec4 = *reinterpret_cast<glm::vec4*>(componentData + offset);
 			out << YAML::Key << name
 				<< YAML::Value << YAML::Flow << YAML::BeginSeq << vec4.x << vec4.y << vec4.z << vec4.w << YAML::EndSeq;
-		},nullptr
-		//[](char* componentData, size_t offset, YAML::Node& value){}
+		},
+		[](char* componentData, size_t offset, YAML::Node& value)
+		{
+			glm::vec4& _value = *reinterpret_cast<glm::vec4*>(componentData + offset);
+			for (int i = 0; i < 4; i++)
+			{
+				_value[i] = value[i].as<float>();
+			}
+		}
 	);
 	YamlFieldSerializationEntry::RegisterSerializeableFiled<gns::color3>(
 		[](const std::string& name, char* componentData, size_t offset, YAML::Emitter& out)
@@ -217,8 +296,15 @@ void gns::serialization::SceneSerializer::RegisterTable()
 			glm::vec3 vec3 = *reinterpret_cast<glm::vec3*>(componentData + offset);
 			out << YAML::Key << name
 				<< YAML::Value << YAML::Flow << YAML::BeginSeq << vec3.x << vec3.y << vec3.z << YAML::EndSeq;
-		},nullptr
-		//[](char* componentData, size_t offset, YAML::Node& value){}
+		},
+		[](char* componentData, size_t offset, YAML::Node& value)
+		{
+			glm::vec3& _value = *reinterpret_cast<glm::vec3*>(componentData + offset);
+			for (int i = 0; i < 3; i++)
+			{
+				_value[i] = value[i].as<float>();
+			}
+		}
 	);
 }
 
@@ -226,18 +312,18 @@ void TrySetFieldValue(size_t field_type, char* componentData, size_t offset, YAM
 {
 	if(!YamlFieldSerializationEntry::Deserialize(field_type, componentData, offset, value))
 	{
-		LOG_INFO("Setting field value failed!");
+		LOG_ERROR("Setting field value failed!");
 	}
 }
 
-void* TryAddComponent(size_t component_type_id, gns::entityHandle entity_handle)
+void* TryAddComponent(size_t component_type_id, gns::entityHandle entity_handle, YAML::Node& value)
 {
-	if(ComponentDeserializer_Table.contains(component_type_id))
-	{
-		return ComponentDeserializer_Table[component_type_id](entity_handle);
-	}
+	void* componentPtr = YamlComponentSerializationEntry::Deserialize(component_type_id, entity_handle, value);
+	if (componentPtr != nullptr)
+		return componentPtr;
+
+	LOG_ERROR("Cannot deserialize / add component!");
 	return nullptr;
-	
 }
 
 void TrySerializeField(size_t typeHash, const std::string& name, char* componentData, size_t offset, YAML::Emitter& out)
@@ -297,10 +383,14 @@ std::string gns::serialization::SceneSerializer::SerializeScene(gns::scene::Scen
 			char* data_ptr = (char*)entityComponent.data;
 			ComponentMeta& cmpMeta = ISerializeableComponent::sComponentData[typehash];
 
+			/*
 			out << YAML::BeginMap << YAML::Key << "component_data" << YAML::Value << YAML::BeginMap;
 			out << YAML::Key << "cmp_name" << YAML::Value << cmpMeta.name;
 			out << YAML::Key << "cmp_type" << YAML::Value << typehash;
-			out << YAML::Key << "cmp_fields" << YAML::Value << YAML::BeginSeq;
+			out << YAML::Key << "cmp_fields" << YAML::Value;
+			 */
+			YamlComponentSerializationEntry::Serialize(typehash, cmpMeta.name, data_ptr, out);
+			out << YAML::BeginSeq;
 			for (auto& field : cmpMeta.fields)
 			{
 				out << YAML::BeginMap;
@@ -336,7 +426,8 @@ gns::scene::Scene* gns::serialization::SceneSerializer::DeserializeScene(const s
 		for (const auto & yaml_component_data : yaml_entity["components"])
 		{
 			auto yaml_component = yaml_component_data["component_data"];
-			void* component_data_ptr = TryAddComponent(yaml_component["cmp_type"].as<size_t>(), entity);
+			void* component_data_ptr = TryAddComponent(yaml_component["cmp_type"].as<size_t>(), entity, yaml_component);
+
 			if(component_data_ptr == nullptr)
 				continue;
 
