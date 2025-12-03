@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "Utils/vkutils.h"
 #include "Utils/VulkanObjects.h"
-
+#include "Utils/VkDescriptors.h"
 class Screen;
 
 namespace gns::rendering
@@ -25,6 +25,8 @@ namespace gns::rendering
 		void Create(Screen* screen);
 		void Destroy();
 		void Resize(Screen* screen);
+		void AllocateDescriptorSet(DescriptorAllocator& descriptor_allocator);
+
 
 		VkSwapchainKHR& Get() { return m_swapchain; }
 		VkSwapchainKHR* Get_ptr() { return &m_swapchain; }
@@ -35,6 +37,8 @@ namespace gns::rendering
 		VulkanImage& GetDepthImage() { return m_depthImage; }
 		VkImage GetImage(size_t index) { return m_images[index]; };
 		VkImageView GetImageView(size_t index) { return m_imageViews[index]; };
+		VkDescriptorSet* GetDescriptorSet_ptr() { return &m_renderTarget_DS; };
+		VkDescriptorSetLayout* GetSetLayout_ptr() { return &m_renderTargetSetLayout; };
 
 	private:
 		VkDevice m_device;
@@ -49,6 +53,7 @@ namespace gns::rendering
 		std::vector<VkImageView> m_imageViews;
 		VulkanImage m_renderTarget;
 		VkDescriptorSet m_renderTarget_DS;
+		VkDescriptorSetLayout m_renderTargetSetLayout;
 		VulkanImage m_depthImage;
 	};
 }

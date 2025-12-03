@@ -184,14 +184,14 @@ namespace gns::rendering
 
 		VulkanImage m_renderTargetImage;
 		VulkanImage m_depthImage;
+		VkDescriptorSet m_renderTargetDescriptor;
+		VkDescriptorSetLayout m_renderTargetSetLayout;
 		*/
 
 
 		std::vector<FrameData> m_frames;
 
 		DescriptorAllocator m_globalDescriptorAllocator;
-		VkDescriptorSet m_renderTargetDescriptor;
-		VkDescriptorSetLayout m_renderTargetSetLayout;
 
 		static ImmeduateSubmitStruct sImmediateSubmitStruct;
 		Shader* m_currentBoundShader = nullptr;

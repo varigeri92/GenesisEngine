@@ -25,6 +25,8 @@
 #include "../../Window/WindowSystem.h"
 
 
+gns::rendering::ImmeduateSubmitStruct gns::rendering::Device::sImmediateSubmitStruct = {};
+
 #pragma region DeletionQueue
 void gns::rendering::DeletionQueue::Push(std::function<void()>&& function)
 {
@@ -41,103 +43,6 @@ void gns::rendering::DeletionQueue::Flush()
 	deletors.clear();
 }
 #pragma endregion
-
-#pragma region DescriptorLayoutBuilders:
-void gns::rendering::DescriptorLayoutBuilder::AddBinding(uint32_t binding, VkDescriptorType type)
-{
-    VkDescriptorSetLayoutBinding newbind{};
-    newbind.binding = binding;
-    newbind.descriptorCount = 1;
-    newbind.descriptorType = type;
-
-    bindings.push_back(newbind);
-}
-
-void gns::rendering::DescriptorLayoutBuilder::Clear()
-{
-    bindings.clear();
-}
-
-VkDescriptorSetLayout gns::rendering::DescriptorLayoutBuilder::Build(VkDevice device, VkShaderStageFlags shaderStages,
-	void* pNext, VkDescriptorSetLayoutCreateFlags flags)
-{
-    for (auto& b : bindings) {
-        b.stageFlags |= shaderStages;
-    }
-
-    VkDescriptorSetLayoutCreateInfo info = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-    info.pNext = pNext;
-
-    info.pBindings = bindings.data();
-    info.bindingCount = (uint32_t)bindings.size();
-    info.flags = flags;
-
-    VkDescriptorSetLayout set;
-    _VK_CHECK(vkCreateDescriptorSetLayout(device, &info, nullptr, &set),"Failed To create Descriptor set layout.");
-
-    return set;
-}
-
-void gns::rendering::DescriptorAllocator::InitPool(VkDevice device, uint32_t maxSets,
-	std::span<PoolSizeRatio> poolRatios)
-{
-    std::vector<VkDescriptorPoolSize> poolSizes;
-    for (PoolSizeRatio ratio : poolRatios) {
-        poolSizes.push_back(VkDescriptorPoolSize{
-            .type = ratio.type,
-            .descriptorCount = uint32_t(ratio.ratio * maxSets)
-            });
-    }
-
-    VkDescriptorPoolCreateInfo pool_info = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-    pool_info.flags = 0;
-    pool_info.maxSets = maxSets;
-    pool_info.poolSizeCount = (uint32_t)poolSizes.size();
-    pool_info.pPoolSizes = poolSizes.data();
-
-    vkCreateDescriptorPool(device, &pool_info, nullptr, &pool);
-}
-
-void gns::rendering::DescriptorAllocator::ClearDescriptors(VkDevice device)
-{
-    vkResetDescriptorPool(device, pool, 0);
-}
-
-void gns::rendering::DescriptorAllocator::DestroyPool(VkDevice device)
-{
-    vkDestroyDescriptorPool(device, pool, nullptr);
-}
-
-VkDescriptorSet gns::rendering::DescriptorAllocator::Allocate(VkDevice device, VkDescriptorSetLayout layout)
-{
-    VkDescriptorSetAllocateInfo allocInfo = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-    allocInfo.pNext = nullptr;
-    allocInfo.descriptorPool = pool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &layout;
-
-    VkDescriptorSet ds;
-    _VK_CHECK(vkAllocateDescriptorSets(device, &allocInfo, &ds),"Failed To allocate descriptor set");
-
-    return ds;
-}
-
-VkDescriptorSet gns::rendering::DescriptorAllocator::Allocate(VkDevice device, VkDescriptorSetLayout layout,
-	VkDescriptorPool _pool)
-{
-    VkDescriptorSetAllocateInfo allocInfo = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-    allocInfo.pNext = nullptr;
-    allocInfo.descriptorPool = _pool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &layout;
-    
-    VkDescriptorSet ds;
-    _VK_CHECK(vkAllocateDescriptorSets(device, &allocInfo, &ds), "Failed To allocate descriptor set");
-
-    return ds;
-}
-#pragma endregion
-gns::rendering::ImmeduateSubmitStruct gns::rendering::Device::sImmediateSubmitStruct = {};
 // Device Code:
 gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(2), m_imageIndex(0)
 {
@@ -210,7 +115,7 @@ void gns::rendering::Device::InitBackgroundPipelines()
     VkPipelineLayoutCreateInfo computeLayout{};
     computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     computeLayout.pNext = nullptr;
-    computeLayout.pSetLayouts = &m_renderTargetSetLayout;
+    computeLayout.pSetLayouts = m_swapchain.GetSetLayout_ptr();
     computeLayout.setLayoutCount = 1;
     computeLayout.pPushConstantRanges = &pushConstant;
     computeLayout.pushConstantRangeCount = 1;
@@ -450,108 +355,16 @@ bool gns::rendering::Device::InitVulkan()
 void gns::rendering::Device::CreateSwapchain()
 {
     m_swapchain.Create(m_screen);
-    /*
-    vkb::SwapchainBuilder swapchainBuilder{ m_physicalDevice, m_device, m_surface };
-
-    m_swapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
-
-    vkb::Swapchain vkbSwapchain = swapchainBuilder
-        //.use_default_format_selection()
-        .set_desired_format(VkSurfaceFormatKHR{ .format = m_swapchainFormat, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
-        //use vsync present mode
-        .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-        .set_desired_extent(m_screen->width, m_screen->height)
-        .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-        .build()
-        .value();
-
-    m_swapchainExtent = vkbSwapchain.extent;
-    m_swapchain = vkbSwapchain.swapchain;
-    m_images = vkbSwapchain.get_images().value();
-    m_imageViews = vkbSwapchain.get_image_views().value();
-
-    VkExtent3D drawImageExtent = {
-        m_swapchainExtent.width,
-        m_swapchainExtent.height,
-        1
-    };
-    m_screen->width = m_swapchainExtent.width;
-    m_screen->height = m_swapchainExtent.height;
-    m_screen->aspectRatio = (float)m_swapchainExtent.width / (float)m_swapchainExtent.height;
-    m_screen->updateRenderTargetTarget = true;
-    //hardcoding the draw format to 32 bit float
-    m_renderTargetImage.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
-    m_renderTargetImage.imageExtent = drawImageExtent;
-
-    VkImageUsageFlags drawImageUsages{};
-    drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
-    drawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    VkImageCreateInfo rimg_info = utils::ImageCreateInfo(m_renderTargetImage.imageFormat, drawImageUsages, drawImageExtent);
-
-    //for the draw image, we want to allocate it from gpu local memory
-    VmaAllocationCreateInfo rimg_allocinfo = {};
-    rimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    rimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-    //allocate and create the image
-    vmaCreateImage(m_allocator, &rimg_info, &rimg_allocinfo, &m_renderTargetImage.image, &m_renderTargetImage.allocation, nullptr);
-
-    //build a image-view for the draw image to use for rendering
-    VkImageViewCreateInfo rview_info = utils::ImageViewCreateInfo(m_renderTargetImage.imageFormat, m_renderTargetImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
-
-    _VK_CHECK(vkCreateImageView(m_device, &rview_info, nullptr, &m_renderTargetImage.imageView),"");
-
-
-    m_depthImage.imageFormat = VK_FORMAT_D32_SFLOAT;
-    m_depthImage.imageExtent = drawImageExtent;
-    VkImageUsageFlags depthImageUsages{};
-    depthImageUsages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-
-    VkImageCreateInfo dimg_info = utils::ImageCreateInfo(m_depthImage.imageFormat, depthImageUsages, drawImageExtent);
-
-    //allocate and create the image
-    vmaCreateImage(m_allocator, &dimg_info, &rimg_allocinfo, &m_depthImage.image, &m_depthImage.allocation, nullptr);
-
-    //build a image-view for the draw image to use for rendering
-    VkImageViewCreateInfo dview_info = utils::ImageViewCreateInfo(m_depthImage.imageFormat, m_depthImage.image, VK_IMAGE_ASPECT_DEPTH_BIT);
-
-    _VK_CHECK(vkCreateImageView(m_device, &dview_info, nullptr, &m_depthImage.imageView), "Failed to create Depth Image");
-    */
 }
 
 void gns::rendering::Device::ResizeSwapchain()
 {
     m_swapchain.Resize(m_screen);
-    /* 
-	vkDeviceWaitIdle(m_device);
-
-	DestroySwapchain();
-	CreateSwapchain();
-
-    DescriptorWriter writer;
-    writer.WriteImage(0, m_renderTargetImage.imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    writer.UpdateSet(m_device, m_renderTargetDescriptor);
-    */
 }
 
 void gns::rendering::Device::DestroySwapchain()
 {
     m_swapchain.Destroy();
-    /* 
-    vkDestroyImageView(m_device, m_renderTargetImage.imageView, nullptr);
-    vmaDestroyImage(m_allocator, m_renderTargetImage.image, m_renderTargetImage.allocation);
-
-    vkDestroyImageView(m_device, m_depthImage.imageView, nullptr);
-    vmaDestroyImage(m_allocator, m_depthImage.image, m_depthImage.allocation);
-
-    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
-    for (int i = 0; i < m_imageViews.size(); i++) {
-        vkDestroyImageView(m_device, m_imageViews[i], nullptr);
-    }
-    */
 }
 void gns::rendering::Device::InitDescriptors()
 {
@@ -560,15 +373,7 @@ void gns::rendering::Device::InitDescriptors()
         { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
     };
     m_globalDescriptorAllocator.InitPool(m_device, 10, sizes);
-    {
-        DescriptorLayoutBuilder builder;
-        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-        m_renderTargetSetLayout = builder.Build(m_device, VK_SHADER_STAGE_COMPUTE_BIT);
-    }
-    m_renderTargetDescriptor = m_globalDescriptorAllocator.Allocate(m_device, m_renderTargetSetLayout);
-    DescriptorWriter writer;
-    writer.WriteImage(0, m_swapchain.GetRenderTargetImage().imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    writer.UpdateSet(m_device, m_renderTargetDescriptor);
+    m_swapchain.AllocateDescriptorSet(m_globalDescriptorAllocator);
 
 
     for (uint32_t i = 0; i < m_imageCount; i++) {
@@ -596,7 +401,7 @@ void gns::rendering::Device::InitDescriptors()
 
     m_deletionQueue.Push([&]() {
         m_globalDescriptorAllocator.DestroyPool(m_device);
-        vkDestroyDescriptorSetLayout(m_device, m_renderTargetSetLayout, nullptr);
+        vkDestroyDescriptorSetLayout(m_device, *m_swapchain.GetSetLayout_ptr(), nullptr);
         });
 }
 
@@ -737,7 +542,7 @@ void gns::rendering::Device::DrawBackground(VkCommandBuffer cmd)
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, effect.pipeline);
     vkCmdBindDescriptorSets(cmd, 
         VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipelineLayout, 0, 1, 
-        &m_renderTargetDescriptor, 0, nullptr);
+        m_swapchain.GetDescriptorSet_ptr(), 0, nullptr);
     vkCmdPushConstants(cmd, m_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &effect.data);
     vkCmdDispatch(cmd, 
         std::ceil(static_cast<float>(drawExtent.width) / 16.0f), 

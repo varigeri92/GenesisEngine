@@ -129,3 +129,16 @@ void gns::rendering::Swapchain::Resize(Screen* screen)
     writer.WriteImage(0, m_renderTarget.imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
     writer.UpdateSet(m_device, m_renderTarget_DS);
 }
+
+void gns::rendering::Swapchain::AllocateDescriptorSet(DescriptorAllocator& descriptor_allocator)
+{
+
+    DescriptorLayoutBuilder builder;
+    builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+    m_renderTargetSetLayout = builder.Build(m_device, VK_SHADER_STAGE_COMPUTE_BIT);
+
+    m_renderTarget_DS = descriptor_allocator.Allocate(m_device, m_renderTargetSetLayout);
+    DescriptorWriter writer;
+    writer.WriteImage(0, m_renderTarget.imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+    writer.UpdateSet(m_device, m_renderTarget_DS);
+}
