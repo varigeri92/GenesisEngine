@@ -3,6 +3,9 @@
 #include <deque>
 #include <functional>
 #include <span>
+
+#include "RenderGraph.h"
+#include "Swapchain.h"
 #include "Utils/vkutils.h"
 #include "VkBootstrap.h"
 #include "../Handles/Handles.h"
@@ -128,6 +131,7 @@ namespace gns::rendering
 
 	private:
 		Screen* m_screen;
+		RenderGraph renderGraph;
 		// Move this for sure:
 		std::vector<ComputeEffect> backgroundEffects;
 		int currentBackgroundEffect{ 0 };
@@ -169,19 +173,21 @@ namespace gns::rendering
 		VkQueue m_computeQueue;
 		uint32_t m_computeFamilyIndex;
 
+		Swapchain m_swapchain;
+		/* 
 		vkb::Swapchain m_vkb_swapchain;
 		VkExtent2D m_swapchainExtent;
-
 		VkSwapchainKHR m_swapchain;
 		VkFormat m_swapchainFormat;
-
-
 		std::vector<VkImageView> m_imageViews;
 		std::vector<VkImage> m_images;
-		std::vector<FrameData> m_frames;
 
 		VulkanImage m_renderTargetImage;
 		VulkanImage m_depthImage;
+		*/
+
+
+		std::vector<FrameData> m_frames;
 
 		DescriptorAllocator m_globalDescriptorAllocator;
 		VkDescriptorSet m_renderTargetDescriptor;

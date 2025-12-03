@@ -142,11 +142,11 @@ gns::rendering::ImmeduateSubmitStruct gns::rendering::Device::sImmediateSubmitSt
 gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(2), m_imageIndex(0)
 {
     currentBackgroundEffect = 0;
-    
     InitVulkan();
+    m_swapchain = { m_device, m_physicalDevice, m_surface, m_allocator };
     CreateSwapchain();
     offscreen_Texture = Object::Create<Texture>("offscreen_texture");
-    auto[handle, textureData] = CreateTexture(m_renderTargetImage.imageExtent, VK_FORMAT_R8G8B8A8_UNORM,
+    auto[handle, textureData] = CreateTexture(m_swapchain.GetRenderTargetImage().imageExtent, VK_FORMAT_R8G8B8A8_UNORM,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
     offscreen_Texture->handle = handle;
 
@@ -156,6 +156,7 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
 
 	//-> Init on demand:
     InitPipelines();
+
 
     constexpr size_t DEFAULT_STORAGE_BUFFER_OBJECT_COUNT = 500;
 
@@ -188,7 +189,7 @@ gns::rendering::Device::~Device()
     m_deletionQueue.Flush();
 
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-    vkb::destroy_swapchain(m_vkb_swapchain);
+    //vkb::destroy_swapchain(m_vkb_swapchain);
     vkb::destroy_device(m_vkb_device);
 }
 
@@ -320,8 +321,8 @@ void gns::rendering::Device::CreatePipeline(Shader& shader)
         pipelineBuilder.SetMultisampling(false);
         pipelineBuilder.SetBlending(PipelineBuilder::BlendingMode::disabled);
         pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_LESS_OR_EQUAL);
-        pipelineBuilder.SetColorAttachmentFormat(m_renderTargetImage.imageFormat);
-        pipelineBuilder.SetDepthFormat(m_depthImage.imageFormat);
+        pipelineBuilder.SetColorAttachmentFormat(m_swapchain.GetRenderTargetImage().imageFormat);
+        pipelineBuilder.SetDepthFormat(m_swapchain.GetDepthImage().imageFormat);
         shader.shader.m_pipeline = pipelineBuilder.BuildPipeline(m_device);
     }
 }
@@ -448,6 +449,8 @@ bool gns::rendering::Device::InitVulkan()
 
 void gns::rendering::Device::CreateSwapchain()
 {
+    m_swapchain.Create(m_screen);
+    /*
     vkb::SwapchainBuilder swapchainBuilder{ m_physicalDevice, m_device, m_surface };
 
     m_swapchainFormat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -516,10 +519,13 @@ void gns::rendering::Device::CreateSwapchain()
     VkImageViewCreateInfo dview_info = utils::ImageViewCreateInfo(m_depthImage.imageFormat, m_depthImage.image, VK_IMAGE_ASPECT_DEPTH_BIT);
 
     _VK_CHECK(vkCreateImageView(m_device, &dview_info, nullptr, &m_depthImage.imageView), "Failed to create Depth Image");
+    */
 }
 
 void gns::rendering::Device::ResizeSwapchain()
 {
+    m_swapchain.Resize(m_screen);
+    /* 
 	vkDeviceWaitIdle(m_device);
 
 	DestroySwapchain();
@@ -528,11 +534,13 @@ void gns::rendering::Device::ResizeSwapchain()
     DescriptorWriter writer;
     writer.WriteImage(0, m_renderTargetImage.imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
     writer.UpdateSet(m_device, m_renderTargetDescriptor);
+    */
 }
 
 void gns::rendering::Device::DestroySwapchain()
 {
-
+    m_swapchain.Destroy();
+    /* 
     vkDestroyImageView(m_device, m_renderTargetImage.imageView, nullptr);
     vmaDestroyImage(m_allocator, m_renderTargetImage.image, m_renderTargetImage.allocation);
 
@@ -543,6 +551,7 @@ void gns::rendering::Device::DestroySwapchain()
     for (int i = 0; i < m_imageViews.size(); i++) {
         vkDestroyImageView(m_device, m_imageViews[i], nullptr);
     }
+    */
 }
 void gns::rendering::Device::InitDescriptors()
 {
@@ -558,7 +567,7 @@ void gns::rendering::Device::InitDescriptors()
     }
     m_renderTargetDescriptor = m_globalDescriptorAllocator.Allocate(m_device, m_renderTargetSetLayout);
     DescriptorWriter writer;
-    writer.WriteImage(0, m_renderTargetImage.imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+    writer.WriteImage(0, m_swapchain.GetRenderTargetImage().imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
     writer.UpdateSet(m_device, m_renderTargetDescriptor);
 
 
@@ -697,7 +706,7 @@ bool gns::rendering::Device::BeginDraw(uint32_t& swapchainImageIndex)
     _VK_CHECK(vkResetFences(m_device, 1, &GetCurrentFrame().renderFence), "");
     GetCurrentFrame().deletionQueue.Flush();
     GetCurrentFrame().frameDescriptors.ClearPools(m_device);
-    VkResult result = vkAcquireNextImageKHR(m_device, m_swapchain,
+    VkResult result = vkAcquireNextImageKHR(m_device, m_swapchain.Get(),
         1000000000, GetCurrentFrame().presentSemaphore, nullptr, &swapchainImageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         m_screen->resized = true;
@@ -714,12 +723,12 @@ void gns::rendering::Device::StartFrame(VkCommandBuffer& cmd)
     VkCommandBufferBeginInfo cmdBeginInfo = utils::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
 
-    drawExtent.height = std::min(m_swapchainExtent.height, m_renderTargetImage.imageExtent.height) * 1.f;
-    drawExtent.width = std::min(m_swapchainExtent.width, m_renderTargetImage.imageExtent.width) * 1.f;
+    drawExtent.height = std::min(m_swapchain.GetExtent().height, m_swapchain.GetRenderTargetImage().imageExtent.height) * 1.f;
+    drawExtent.width = std::min(m_swapchain.GetExtent().width, m_swapchain.GetRenderTargetImage().imageExtent.width) * 1.f;
 
     _VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo), "");
 
-    utils::TransitionImage(cmd, m_renderTargetImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    utils::TransitionImage(cmd, m_swapchain.GetRenderTargetImage().image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 }
 
 void gns::rendering::Device::DrawBackground(VkCommandBuffer cmd)
@@ -738,17 +747,19 @@ void gns::rendering::Device::DrawBackground(VkCommandBuffer cmd)
 void gns::rendering::Device::SetDrawStructs(VkCommandBuffer cmd)
 {
 
-    VkRenderingAttachmentInfo colorAttachment = utils::AttachmentInfo(m_renderTargetImage.imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    VkRenderingAttachmentInfo depthAttachment = utils::DepthAttachmentInfo(m_depthImage.imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-    VkRenderingInfo renderInfo = utils::RenderingInfo(m_swapchainExtent, &colorAttachment, &depthAttachment);
+    VkRenderingAttachmentInfo colorAttachment = 
+        utils::AttachmentInfo(m_swapchain.GetRenderTargetImage().imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingAttachmentInfo depthAttachment = 
+        utils::DepthAttachmentInfo(m_swapchain.GetDepthImage().imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo renderInfo = utils::RenderingInfo(m_swapchain.GetExtent(), &colorAttachment, &depthAttachment);
 
     vkCmdBeginRendering(cmd, &renderInfo);
 
     VkViewport viewport = {};
     viewport.x = 0;
     viewport.y = 0;
-    viewport.width = static_cast<float>(m_swapchainExtent.width);
-    viewport.height = static_cast<float>(m_swapchainExtent.height);
+    viewport.width = static_cast<float>(m_swapchain.GetExtent().width);
+    viewport.height = static_cast<float>(m_swapchain.GetExtent().height);
     viewport.minDepth = 0.f;
     viewport.maxDepth = 1.f;
     vkCmdSetViewport(cmd, 0, 1, &viewport);
@@ -756,8 +767,8 @@ void gns::rendering::Device::SetDrawStructs(VkCommandBuffer cmd)
     VkRect2D scissor = {};
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    scissor.extent.width = m_swapchainExtent.width;
-    scissor.extent.height = m_swapchainExtent.height;
+    scissor.extent.width = m_swapchain.GetExtent().width;
+    scissor.extent.height = m_swapchain.GetExtent().height;
     vkCmdSetScissor(cmd, 0, 1, &scissor);
 }
 
@@ -818,24 +829,24 @@ void gns::rendering::Device::Draw(
 
     DrawBackground(cmd);
 
-    utils::TransitionImage(cmd, m_renderTargetImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	utils::TransitionImage(cmd, m_depthImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+    utils::TransitionImage(cmd, m_swapchain.GetRenderTargetImage().image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+	utils::TransitionImage(cmd, m_swapchain.GetDepthImage().image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
     SetDrawStructs(cmd);
 
     DrawGeometry(cmd, objects, indices, meshes, materials);
 
-    utils::TransitionImage(cmd, m_renderTargetImage.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-	utils::TransitionImage(cmd, m_images[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    utils::TransitionImage(cmd, m_swapchain.GetRenderTargetImage().image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	utils::TransitionImage(cmd, m_swapchain.GetImage(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    utils::CopyImageToImage(cmd, m_renderTargetImage.image, m_images[swapchainImageIndex], drawExtent, m_swapchainExtent);
+    utils::CopyImageToImage(cmd, m_swapchain.GetRenderTargetImage().image, m_swapchain.GetImage(swapchainImageIndex), drawExtent, m_swapchain.GetExtent());
     VulkanTexture& vkTexture = GetTexture(offscreen_Texture->handle);
     utils::TransitionImage(cmd, vkTexture.image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    utils::CopyImageToImage(cmd, m_renderTargetImage.image, vkTexture.image.image, drawExtent, drawExtent);
+    utils::CopyImageToImage(cmd, m_swapchain.GetRenderTargetImage().image, vkTexture.image.image, drawExtent, drawExtent);
     utils::TransitionImage(cmd, vkTexture.image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-	DrawImGui(cmd, m_imageViews[swapchainImageIndex]);
-    utils::TransitionImage(cmd, m_images[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+	DrawImGui(cmd, m_swapchain.GetImageView(swapchainImageIndex));
+    utils::TransitionImage(cmd, m_swapchain.GetImage(swapchainImageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
 	_VK_CHECK(vkEndCommandBuffer(cmd),"");
 
@@ -898,7 +909,7 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
 void gns::rendering::Device::DrawImGui(VkCommandBuffer cmd, VkImageView targetImageView)
 {
 	VkRenderingAttachmentInfo colorAttachment = utils::AttachmentInfo(targetImageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	VkRenderingInfo renderInfo = utils::RenderingInfo(m_swapchainExtent, &colorAttachment, nullptr);
+	VkRenderingInfo renderInfo = utils::RenderingInfo(m_swapchain.GetExtent(), &colorAttachment, nullptr);
 	vkCmdBeginRendering(cmd, &renderInfo);
     ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
@@ -920,7 +931,7 @@ void gns::rendering::Device::EndFrame(VkCommandBuffer& cmd, uint32_t& swapchainI
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.pNext = nullptr;
-    presentInfo.pSwapchains = &m_swapchain;
+    presentInfo.pSwapchains = m_swapchain.Get_ptr();
     presentInfo.swapchainCount = 1;
 
     presentInfo.pWaitSemaphores = &GetCurrentFrame().renderSemaphore;

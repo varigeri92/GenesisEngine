@@ -168,9 +168,38 @@ namespace gns::rendering
 		uint64_t vertexBuffer;
 	};
 
+	enum class PassType
+	{
+		Graphics,
+		Compute,
+		Transfer
+	};
+
+	struct RenderPassContext
+	{
+		VkDevice device{ VK_NULL_HANDLE };
+		VkCommandBuffer cmd { VK_NULL_HANDLE };
+		VkPipeline pipeline { VK_NULL_HANDLE };
+		VkPipelineBindPoint bindPoint { VK_PIPELINE_BIND_POINT_COMPUTE };
+		VkShaderStageFlags shaderStages{ VK_SHADER_STAGE_ALL };
+		VkPipelineLayout pipelineLayout{ VK_NULL_HANDLE };
+		VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
+	};
+
+	struct RenderPassData
+	{
+		bool writeDepth;
+		bool writeColor;
+		PassType passType;
+		VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
+		VulkanShader* shaderOverride {nullptr};
+	};
+	
 	struct RenderPass
 	{
-		VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
-		VkPipeline pipelineOverride = VK_NULL_HANDLE;
+		std::string name = "Invalid Pass";
+		RenderPassData data {};
+		RenderPassContext ctx {};
+		std::function<void(RenderPass&)> record {nullptr};
 	};
 }

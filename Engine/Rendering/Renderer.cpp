@@ -163,7 +163,7 @@ void gns::rendering::Renderer::InitImGui()
     //dynamic rendering parameters for imgui to use
     init_info.PipelineRenderingCreateInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
     init_info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-    init_info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &m_device->m_swapchainFormat;
+    init_info.PipelineRenderingCreateInfo.pColorAttachmentFormats = m_device->m_swapchain.GetFormat_ptr();
 
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
