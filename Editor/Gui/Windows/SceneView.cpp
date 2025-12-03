@@ -11,11 +11,29 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "../../AssetManagement/AssetImporter.h"
+#include <vector>
 
 void decomposeMatrix(const glm::mat4& matrix, glm::vec3& scale, glm::quat& rotation, glm::vec3& translation) {
 	glm::vec3 skew;
 	glm::vec4 perspective;
 	glm::decompose(matrix, scale, rotation, translation, skew, perspective);
+}
+
+void gns::editor::gui::SceneView::CreateMesh(AssetMetadata* metaData)
+{
+	const MeshAsset meshAsset = assets::AssetImporter::GetMeshAsset(*metaData);
+	Entity entity = Entity::CreateEntity(metaData->assetName);
+	entity::MeshComponent& mesh_cmp = entity.AddComponet<entity::MeshComponent>();
+	mesh_cmp.meshAsset = metaData->assetGuid;
+	assetLibrary::LoadMeshAsset(meshAsset,
+	[&](const std::vector<guid>& loadedMeshes, const std::vector<guid>& loadedMaterials)
+	{
+		for (size_t i = 0; i < loadedMeshes.size(); i++)
+		{
+			mesh_cmp.meshes.push_back(Object::Get<rendering::Mesh>(loadedMeshes[i]));
+			mesh_cmp.materials.push_back(Object::Get<rendering::Material>(loadedMaterials[i]));
+		}
+	});
 }
 
 gns::editor::gui::SceneView::SceneView()
@@ -55,8 +73,6 @@ void gns::editor::gui::SceneView::OnWindowDraw()
 	m_drawRegion = ImGui::GetContentRegionAvail();
 	ImGuiViewport* vp = ImGui::GetWindowViewport();
 
-
-
 	if(static_cast<uint32_t>(m_drawRegion.x) != m_lastFrameRender_Width ||
 		static_cast<uint32_t>(m_drawRegion.y) != m_lastFrameRender_Height)
 	{
@@ -69,7 +85,6 @@ void gns::editor::gui::SceneView::OnWindowDraw()
 		m_renderTexture = m_renderSystem->GetRenderTargetTextureID();
 		m_screen->aspectRatio = m_drawRegion.x / m_drawRegion.y;
 	}
-
 
 	if(m_screen->updateRenderTargetTarget)
 	{
@@ -88,18 +103,7 @@ void gns::editor::gui::SceneView::OnWindowDraw()
 				AssetMetadata* metadata_ptr = assets::AssetImporter::GetMetadata(payload_string);
 				if (metadata_ptr->assetType == assetLibrary::AssetType::Mesh)
 				{
-					const MeshAsset meshAsset = assets::AssetImporter::GetMeshAsset(*metadata_ptr);
-					assetLibrary::LoadMeshAsset(meshAsset, 
-						[metadata_ptr](const std::vector<guid>& loadedMeshes, const std::vector<guid>& loadedMaterials)
-					{
-						Entity entity = Entity::CreateEntity(metadata_ptr->assetName);
-						entity::MeshComponent& mesh_cmp = entity.AddComponet<entity::MeshComponent>();
-						for (size_t i  =0; i < loadedMeshes.size(); i++)
-						{
-							mesh_cmp.meshes.push_back(Object::Get<rendering::Mesh>(loadedMeshes[i]));
-							mesh_cmp.materials.push_back(Object::Get<rendering::Material>(loadedMaterials[i]));
-						}
-					});
+					CreateMesh(metadata_ptr);
 				}
 			}else
 			{

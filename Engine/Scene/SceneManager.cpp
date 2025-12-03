@@ -53,6 +53,11 @@ gns::scene::Scene* gns::scene::SceneManager::CreateScene(const std::string& name
 	return scene;
 }
 
+void gns::scene::SceneManager::SetActiveScene(Scene* scene)
+{
+	sActiveScene = scene;
+}
+
 void gns::scene::SceneManager::UnloadScene(const std::string& name)
 {
 }

@@ -3,6 +3,42 @@
 
 namespace gns
 {
+	struct RuntimeAsset{
+		size_t assetId = static_cast<size_t>(-1);
+		std::string path = {};
+	};
+
+	class AssetRegistry
+	{
+	private:
+		GNS_API static RuntimeAsset sInvalidAssetEntry;
+		GNS_API static std::unordered_map<guid, RuntimeAsset> sRegistry;
+	public:
+		static const RuntimeAsset& Get(guid guid)
+		{
+			if(sRegistry.contains(guid))
+				return sRegistry[guid];
+			return sInvalidAssetEntry;
+		}
+
+		static void Add(guid guid, RuntimeAsset asset)
+		{
+			if(sRegistry.contains(guid))
+			{
+				LOG_INFO("Guid Collision... overvrite entry.");
+			}
+			sRegistry[guid] = std::move(asset);
+		}
+
+		static void ListAssets()
+		{
+			for (auto& it : sRegistry) {
+				// Do stuff
+				LOG_INFO(it.second.path);
+			}
+		}
+	};
+
 	struct Material
 	{
 		guid asset_guid;

@@ -43,6 +43,7 @@ void gns::editor::assets::AssetLibrary::ScanAssetLibrary()
 			metaNode["src_path"].as<std::string>(),
 			static_cast<assetLibrary::AssetType>(metaNode["asset_type"].as<uint32_t>())
 		};
+		AssetRegistry::Add(guid, { .assetId = guid, .path = PathManager::AssetsPath + assetDatabase[guid].srcPath });
 	}
 	LOG_INFO("Scan completed. \n \t - Found " + std::to_string(assetDatabase.size()) + " assets. \n \t - Marked " 
 		+ std::to_string(mark_for_delete.size()) + " for delete (no Meta files where found!)");

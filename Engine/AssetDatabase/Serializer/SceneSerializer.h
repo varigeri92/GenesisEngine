@@ -21,5 +21,8 @@ namespace gns::serialization
 		GNS_API scene::Scene* DeserializeScene(const std::string& sceneFilePath);
 
 		static void RegisterTable();
+
+	private:
+		void ProcessSceneReferences(gns::scene::Scene* scene);
 	};
 }

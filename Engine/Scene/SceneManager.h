@@ -19,6 +19,7 @@ namespace gns::scene
 
 		static Scene& GetActiveScene();
 		static Scene* CreateScene(const std::string& name);
+		static void SetActiveScene(Scene* scene);
 		static void UnloadScene(const std::string& name);
 		static void LoadScene(const std::string& path, LoadMode mode = LoadMode::Additive);
 

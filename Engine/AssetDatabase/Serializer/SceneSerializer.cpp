@@ -195,8 +195,8 @@ void gns::serialization::SceneSerializer::RegisterTable()
 		{
 			gns::Entity entity = { entity_handle };
 			auto& component = entity.AddComponet<gns::entity::MeshComponent>();
-			auto* mat = SystemsManager::GetSystem<RenderSystem>()->GetMaterial("default_material");
-			component.materials.push_back(mat);
+			component.meshAsset = 0;
+			component.material_ref = 0;
 			return static_cast<void*>(&component);
 		});
 
@@ -308,6 +308,52 @@ void gns::serialization::SceneSerializer::RegisterTable()
 	);
 }
 
+
+gns::MeshAsset GetMeshAsset(const std::string& filePath)
+{
+	std::string path = filePath;
+	if(!gns::fileUtils::HasFileExtension(filePath, "gnsMesh"))
+	{
+		path = filePath + ".gnsMesh";
+	}
+	YAML::Node meshAssetFile = YAML::LoadFile(path);
+	gns::MeshAsset asset = {
+		meshAssetFile["asset_guid"].as<uint64_t>(),
+		meshAssetFile["asset_name"].as<std::string>(),
+		meshAssetFile["file_path"].as<std::string>(), {} };
+
+	for (const auto& mesh : meshAssetFile["sub_meshes"])
+	{
+		asset.sub_meshes.emplace_back(mesh["mesh_index"].as<uint32_t>(), mesh["mesh_guid"].as<uint64_t>());
+	}
+
+	return asset;
+}
+
+void SceneSerializer::ProcessSceneReferences(gns::scene::Scene* scene)
+{
+	for (const auto & entity_handle : scene->m_entities)
+	{
+		Entity entity{ entity_handle };
+		gns::entity::MeshComponent* meshComp;
+		if(entity.TryGetComponent<gns::entity::MeshComponent>(meshComp))
+		{
+			RuntimeAsset runtimeAsset = AssetRegistry::Get(meshComp->meshAsset);
+			MeshAsset meshAsset = GetMeshAsset(runtimeAsset.path);
+			assetLibrary::LoadMeshAsset(meshAsset, 
+				[&](const std::vector<guid>& loadedMeshes, const std::vector<guid>& loadedMaterials)
+			{
+				for (size_t i = 0; i < loadedMeshes.size(); i++)
+				{
+					meshComp->meshes.push_back(Object::Get<rendering::Mesh>(loadedMeshes[i]));
+					meshComp->materials.push_back(Object::Get<rendering::Material>(loadedMaterials[i]));
+				}
+			});
+		}
+		
+	}
+}
+
 void TrySetFieldValue(size_t field_type, char* componentData, size_t offset, YAML::Node& value)
 {
 	if(!YamlFieldSerializationEntry::Deserialize(field_type, componentData, offset, value))
@@ -383,12 +429,6 @@ std::string gns::serialization::SceneSerializer::SerializeScene(gns::scene::Scen
 			char* data_ptr = (char*)entityComponent.data;
 			ComponentMeta& cmpMeta = ISerializeableComponent::sComponentData[typehash];
 
-			/*
-			out << YAML::BeginMap << YAML::Key << "component_data" << YAML::Value << YAML::BeginMap;
-			out << YAML::Key << "cmp_name" << YAML::Value << cmpMeta.name;
-			out << YAML::Key << "cmp_type" << YAML::Value << typehash;
-			out << YAML::Key << "cmp_fields" << YAML::Value;
-			 */
 			YamlComponentSerializationEntry::Serialize(typehash, cmpMeta.name, data_ptr, out);
 			out << YAML::BeginSeq;
 			for (auto& field : cmpMeta.fields)
@@ -408,6 +448,7 @@ std::string gns::serialization::SceneSerializer::SerializeScene(gns::scene::Scen
 	out << YAML::EndMap;
 	return out.c_str();
 }
+
 
 gns::scene::Scene* gns::serialization::SceneSerializer::DeserializeScene(const std::string& sceneFilePath)
 {
@@ -433,18 +474,14 @@ gns::scene::Scene* gns::serialization::SceneSerializer::DeserializeScene(const s
 
 			for (const auto & yaml_field : yaml_component["cmp_fields"])
 			{
-				//LOG_INFO(yaml_field["name"].as<std::string>());
-				//LOG_INFO(yaml_field["type"].as<std::string>());
-				//LOG_INFO(yaml_field["offset"].as<std::string>());
-				//LOG_INFO(yaml_field["offset"].as<std::string>());
 				size_t offset = yaml_field["offset"].as<size_t>();
 				size_t type = yaml_field["type"].as<size_t>();
-
 				YAML::Node field_value = yaml_field["field_value"];
-
 				TrySetFieldValue(type, static_cast<char*>(component_data_ptr), offset, field_value);
 			}
 		}
 	}
+	scene::SceneManager::SetActiveScene(newScene);
+	ProcessSceneReferences(newScene);
 	return newScene;
 }

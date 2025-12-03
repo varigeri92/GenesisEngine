@@ -9,16 +9,16 @@
 #include "../Rendering/Renderer.h"
 #include "../ECS/Component.h"
 #include "../Utils/FileSystemUtils.h"
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "AssetMetadata.h"
 #include "stb_image.h"
 #include "../Utils/PathHelper.h"
 
+std::unordered_map<gns::guid, gns::RuntimeAsset> gns::AssetRegistry::sRegistry = {};
+gns::RuntimeAsset gns::AssetRegistry::sInvalidAssetEntry = {};
 
 namespace gns::assetLibrary
 {
-
 struct AssetImportOptions
 {
     bool ImportMaterials{ false };
@@ -81,7 +81,6 @@ void LoadEmbededTextures(gns::RenderSystem* renderSystem, gns::rendering::Materi
 
 void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const std::vector<guid>&, const std::vector<guid>&)>& onLoadSuccess_callback)
 {
-
     std::string assetDir = gns::fileUtils::GetContainingDirectory(mesh_asset.src_path);
     LOG_INFO(assetDir);
     Assimp::Importer importer;
@@ -138,9 +137,12 @@ void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const s
     for (size_t m = 0; m < scene->mNumMeshes; m++)
     {
         loaded_MeshGuids.push_back(mesh_asset.sub_meshes[m].mesh_guid);
-        gns::rendering::Mesh* newMesh = gns::Object::CreateWithGuid<gns::rendering::Mesh>(mesh_asset.sub_meshes[m].mesh_guid, scene->mMeshes[m]->mName.C_Str());
+        gns::rendering::Mesh* newMesh = gns::Object::CreateWithGuid<gns::rendering::Mesh>(
+            mesh_asset.sub_meshes[m].mesh_guid, scene->mMeshes[m]->mName.C_Str());
+
         const aiMesh* mesh = scene->mMeshes[m];
-        if (scene->HasMaterials())
+
+    	if (scene->HasMaterials())
             loaded_materialGuids.emplace_back(materials[mesh->mMaterialIndex]->getGuid());
 
         for (size_t v = 0; v < scene->mMeshes[m]->mNumVertices; v++)
@@ -159,7 +161,6 @@ void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const s
             }
         }
         const uint32_t startindex = newMesh->indices.size();
-        //newMesh->indexBufferRange.startIndex = static_cast<uint32_t>(newMesh->indices.size());
         for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
             const aiFace& Face = mesh->mFaces[i];
             for (uint32_t i = 0; i < Face.mNumIndices; i++)
@@ -168,7 +169,6 @@ void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const s
                 newMesh->indices.push_back(vi);
             }
         }
-        //newMesh->indexBufferRange.count = static_cast<uint32_t>(newMesh->indices.size());
         const uint32_t count = static_cast<uint32_t>(newMesh->indices.size());
         renderSystem->UploadMesh(newMesh, startindex, count);
     }

@@ -60,7 +60,7 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
 	        }
 	        catch (const std::exception& e)
 	        {
-                LOG_ERROR("Failed to read YAML '{}': {}", path, e.what());
+                LOG_ERROR("Failed to read YAML '{}': {}", relative_path, e.what());
 	        }
         else
             return true;
@@ -119,7 +119,10 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
     default: ;
     }
 
-    return import_result;
+    if(import_result)
+		AssetRegistry::Add(guid, { .assetId = guid, .path = PathManager::AssetsPath + relative_path });
+
+	return import_result;
 }
 
 bool gns::editor::assets::AssetImporter::IsImported(const std::string& filePath)

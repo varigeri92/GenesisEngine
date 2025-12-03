@@ -1,6 +1,11 @@
 ﻿#pragma once
 #include "../../Engine/GUI/GuiWindow.h"
 
+namespace gns
+{
+	struct AssetMetadata;
+}
+
 namespace gns::rendering
 {
 	struct Camera;
@@ -25,6 +30,8 @@ namespace gns::editor::gui
 		ImVec2 m_drawRegion;
 		ImTextureID m_renderTexture;
 		rendering::Camera* m_camera;
+
+		void CreateMesh(AssetMetadata* metaData);
 	public:
 		SceneView();
 		~SceneView() override;
