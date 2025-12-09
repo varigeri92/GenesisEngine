@@ -21,7 +21,7 @@ There is no file dialog. it will load "X:\Project\Path\Assets\scene.gnsscene" an
 Scene Loading are currently additive only! Already existing scenenes will not get unloaded.
 Hold Right MB to look around and WASD to fly around.
 
-the Release build config has some Linking issues. yaml-cpp Use "Debug".
+The "Release" build config has some Linking issues. Use "Debug".
 
 [Test Project]: https://github.com/varigeri92/GenesisEngine_TestProject
 [Vulkan SDK]: https://vulkan.lunarg.com/sdk/home#windows
