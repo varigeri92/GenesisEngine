@@ -12,7 +12,7 @@ project "yaml-cpp"
     -- 1. Ensure the build directory exists
     --
     prebuildcommands {
-        ('if not exist "%s" mkdir "%s"'):format(to_win_path(Yaml_BuildDir), to_win_path(Yaml_BuildDir))
+        -- ('if not exist "%s" mkdir "%s"'):format(to_win_path(Yaml_BuildDir), to_win_path(Yaml_BuildDir))
     }
 
     --
