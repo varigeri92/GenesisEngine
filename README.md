@@ -1,7 +1,8 @@
 # GenesisEngine
 Vulkan "Game Engine" passion project
 
-Requires [Vulkan SDK] installed! 
+* Requires [Vulkan SDK] installed!
+* Project Files are generated with [Premake5], submodules require [CMake] for build.
 Using Includes and Libraries From the Vulkan SDK install (glm, spirv, vma, etc)
 
 How to build:
@@ -24,3 +25,5 @@ the Release build config has some Linking issues. yaml-cpp Use "Debug".
 
 [Test Project]: https://github.com/varigeri92/GenesisEngine_TestProject
 [Vulkan SDK]: https://vulkan.lunarg.com/sdk/home#windows
+[Premake5]: https://premake.github.io
+[CMake]: https://cmake.org
