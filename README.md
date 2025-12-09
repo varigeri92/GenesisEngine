@@ -15,6 +15,8 @@ How to build:
 * To load the Test Scene Click on File / Load 
 * To Save you changes click on File / Save.
 
+There is no file dialog. it will load "X:\Project\Path\Assets\scene.gnsscene" and on save it will save it over!
+
 Scene Loading are currently additive only! Already existing scenenes will not get unloaded.
 Hold Right MB to look around and WASD to fly around.
 
