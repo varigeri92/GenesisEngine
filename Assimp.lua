@@ -12,7 +12,7 @@ project "assimp"
     -- 1. Create build directory
     --
     prebuildcommands {
-        -- ('if not exist "%s" mkdir "%s"'):format(to_win_path(Assimp_BuildDir), to_win_path(Assimp_BuildDir))
+        ('if not exist "%s" mkdir "%s"'):format(to_win_path(Assimp_BuildDir), to_win_path(Assimp_BuildDir))
     }
 
     --
