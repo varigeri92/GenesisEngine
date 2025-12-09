@@ -1,6 +1,5 @@
 # GenesisEngine
 Vulkan "Game Engine" passion project
-
 * Requires [Vulkan SDK] installed!
 * Project Files are generated with [Premake5], submodules require [CMake] for build.
 * Using Includes and Libraries From the Vulkan SDK install (glm, spirv, vma, etc)
