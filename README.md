@@ -12,7 +12,9 @@ How to build:
 
 ![alt text](https://github.com/varigeri92/GenesisEngine/blob/main/git_images/Screenshot%202025-09-24%20132411.png "screenshot")
 
-To load the Test Scene Click on File / Load to Save you changes click on File / Save
+* To load the Test Scene Click on File / Load 
+* To Save you changes click on File / Save.
+
 Scene Loading are currently additive only! Already existing scenenes will not get unloaded.
 Hold Right MB to look around and WASD to fly around.
 
