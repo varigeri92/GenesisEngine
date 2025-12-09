@@ -5,6 +5,10 @@
 -- SDK / SYSTEM PATHS
 ---------------------------------------
 
+function to_win_path(p)
+    return p:gsub("/", "\\")
+end
+
 VULKAN_SDK = os.getenv("VULKAN_SDK")
 
 Paths = {
@@ -13,7 +17,7 @@ Paths = {
     SDL_Include    = VULKAN_SDK .. "/Include/SDL2",
 
     ProjectDir     = "D:\\Project_Genesis\\GenesisEngine_TestProject",
-    ResourceDir    = "D:\\Project_Genesis\\GenesisEngine\\Resources",
+    ResourceDir    = to_win_path(path.getabsolute("Resources")),
 
     OutputDir      = "bin/%{cfg.buildcfg}",
     IntermediateDir= "bin-int"
@@ -88,16 +92,10 @@ Libs = {
 ---------------------------------------
 SolutionRoot = os.getcwd()
 
--- <SolutionRoot>/bin/<Project>/<Config>
 Out = function(projectName)
     return ("%s/bin/%s/%%{cfg.buildcfg}"):format(SolutionRoot, projectName)
 end
 
--- <SolutionRoot>/bin-int/<Project>/<Config>
 Obj = function(projectName)
     return ("%s/bin-int/%s/%%{cfg.buildcfg}"):format(SolutionRoot, projectName)
-end
-
-function to_win_path(p)
-    return p:gsub("/", "\\")
 end
