@@ -3,9 +3,9 @@ Vulkan "Game Engine" passion project
 
 * Requires [Vulkan SDK] installed!
 * Project Files are generated with [Premake5], submodules require [CMake] for build.
-Using Includes and Libraries From the Vulkan SDK install (glm, spirv, vma, etc)
+* Using Includes and Libraries From the Vulkan SDK install (glm, spirv, vma, etc)
 
-How to build:
+# How to build:
 1. Clone with submodules.
     * Clone or download the [Test Project]. This is required, as the Editor Expecting a valid Project, and there is no project creation.
 2. Edit premake_cfg.lua. "ProjectDir" should be the path to the test project you downloaded,
