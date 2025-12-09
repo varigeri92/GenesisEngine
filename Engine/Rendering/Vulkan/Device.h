@@ -174,21 +174,6 @@ namespace gns::rendering
 		uint32_t m_computeFamilyIndex;
 
 		Swapchain m_swapchain;
-		/* 
-		vkb::Swapchain m_vkb_swapchain;
-		VkExtent2D m_swapchainExtent;
-		VkSwapchainKHR m_swapchain;
-		VkFormat m_swapchainFormat;
-		std::vector<VkImageView> m_imageViews;
-		std::vector<VkImage> m_images;
-
-		VulkanImage m_renderTargetImage;
-		VulkanImage m_depthImage;
-		VkDescriptorSet m_renderTargetDescriptor;
-		VkDescriptorSetLayout m_renderTargetSetLayout;
-		*/
-
-
 		std::vector<FrameData> m_frames;
 
 		DescriptorAllocator m_globalDescriptorAllocator;
@@ -249,5 +234,8 @@ namespace gns::rendering
 
 		uint32_t GetMemoryType(uint32_t typeBits,
 			VkMemoryPropertyFlags properties, VkBool32* memTypeFound = nullptr) const;
+
+		void DestroyTexture(TextureHandle handle);
+		void DestroyMesh(MeshHandle handle);
 	};
 }

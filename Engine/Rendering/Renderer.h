@@ -54,6 +54,8 @@ namespace gns::rendering
 		Renderer(Screen* screen);
 		~Renderer();
 		Texture* GetDefaultTexture(const std::string& textureName);
+		void DestroyTexture(TextureHandle handle);
+		void DestroyMesh(MeshHandle handle);
 
 	private:
 		Screen* m_screen;

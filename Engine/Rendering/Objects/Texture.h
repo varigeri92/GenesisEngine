@@ -36,5 +36,6 @@ namespace gns::rendering
 
 	private:
 		bool keepData;
+		void DisposeInternal();
 	};
 }

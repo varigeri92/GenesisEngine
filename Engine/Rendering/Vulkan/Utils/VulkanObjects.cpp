@@ -298,6 +298,12 @@ void gns::rendering::VulkanTexture::Destroy()
 	image.Destroy();
 }
 
+void gns::rendering::VulkanMesh::Destroy()
+{
+	vertexBuffer.Destroy();
+	indexBuffer.Destroy();
+}
+
 void gns::rendering::VulkanShader::Destroy()
 {
 	vkDestroyPipelineLayout(device, m_pipelineLayout, nullptr);

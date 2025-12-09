@@ -842,6 +842,18 @@ uint32_t gns::rendering::Device::GetMemoryType(
     }
 }
 
+void gns::rendering::Device::DestroyTexture(TextureHandle handle)
+{
+    auto& tex = GetTexture(handle);
+    tex.Destroy();
+}
+
+void gns::rendering::Device::DestroyMesh(MeshHandle handle)
+{
+    auto& mesh = GetMesh(handle);
+    mesh.Destroy();
+}
+
 gns::rendering::VulkanTexture& gns::rendering::Device::GetTexture(TextureHandle handle)
 {
     if(!handle.IsValid())

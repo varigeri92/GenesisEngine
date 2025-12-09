@@ -26,5 +26,8 @@ namespace gns::rendering
 	protected:
 		//Use Object::Create<Mesh>(name) instead!
 		Mesh(std::string name);
+
+	private:
+		void DisposeInternal();
 	};
 }

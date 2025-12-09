@@ -94,6 +94,16 @@ gns::rendering::Texture* gns::rendering::Renderer::GetDefaultTexture(const std::
     return Object::Get<Texture>(guid);
 }
 
+void gns::rendering::Renderer::DestroyTexture(TextureHandle handle)
+{
+    m_device->DestroyTexture(handle);
+}
+
+void gns::rendering::Renderer::DestroyMesh(MeshHandle handle)
+{
+    m_device->DestroyMesh(handle);
+}
+
 VkDescriptorPool imguiPool;
 void gns::rendering::Renderer::InitImGui()
 {
