@@ -10,6 +10,7 @@ Vulkan "Game Engine" passion project
     * Clone or download the [Test Project]. This is required, as the Editor Expecting a valid Project, and there is no project creation.
 2. Edit premake_cfg.lua. "ProjectDir" should be the path to the test project you downloaded,
 3. Run "setup.bat"  Visual Studio 2022 project files are generated
+4. In VisualStudio make sure, that "Editor" is set as the Startup project. 
 
 ![alt text](https://github.com/varigeri92/GenesisEngine/blob/main/git_images/Screenshot%202025-09-24%20132411.png "screenshot")
 
