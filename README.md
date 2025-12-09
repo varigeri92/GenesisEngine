@@ -11,6 +11,8 @@ Vulkan "Game Engine" passion project
 3. Run "setup.bat"  Visual Studio 2022 project files are generated
 4. In VisualStudio make sure, that "Editor" is set as the Startup project. 
 
+#Or alternatively Download the build from the relesease
+
 ![alt text](https://github.com/varigeri92/GenesisEngine/blob/main/git_images/Screenshot%202025-09-24%20132411.png "screenshot")
 
 * To load the Test Scene Click on File / Load 
