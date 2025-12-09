@@ -161,8 +161,8 @@ void SetArguments(int argc, char* argv[])
 	else
 	{
 		LOG_WARNING("No arguments set, falling back to default filepaths!");
-		SetProjectArguments("-p", R"(D:\Project_Genesis\TestProjects\DevTest_Project\)");
-		SetProjectArguments("-r", R"(D:\Project_Genesis\GenesisEngine\Resources\)");
+		SetProjectArguments("-p", R"(GenesisEngine_TestProject\)");
+		SetProjectArguments("-r", R"(Resources\)");
 	}
 
 	PathManager::AssetDatabasePath = PathManager::FromProjectRelative(R"(.AssetDatabase\)");
