@@ -74,7 +74,7 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
     m_spotLightStorageBuffer = VulkanBuffer::Create(m_allocator, sizeof(SpotLight) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-    m_dirLightStorageBuffer = VulkanBuffer::Create(m_allocator, sizeof(SpotLight) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
+    m_dirLightStorageBuffer = VulkanBuffer::Create(m_allocator, sizeof(DirectionalLight) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 }

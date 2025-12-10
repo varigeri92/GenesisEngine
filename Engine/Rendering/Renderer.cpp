@@ -264,13 +264,14 @@ void gns::rendering::Renderer::BuildDrawData()
 		m_device->UpdatePointLightBuffer(point_lights.data(), point_lights.size() * sizeof(PointLight));
 	}
     {
-	    
 	    auto dirLightWiev = SystemsManager::GetRegistry()
 	        .view<
 	        gns::entity::EntityComponent,
 	        gns::entity::Transform,
 	        gns::rendering::LightComponent,
-	        gns::rendering::ColorComponent>(entt::exclude<gns::rendering::PointLightComponent>);
+	        gns::rendering::ColorComponent>(entt::exclude<
+                gns::rendering::PointLightComponent, 
+                gns::rendering::SpotLightComponent>);
 
 	    std::vector<DirectionalLight> dir_lights = {};
 	    dir_lights.reserve(dirLightWiev.size_hint());
@@ -294,11 +295,42 @@ void gns::rendering::Renderer::BuildDrawData()
 	    }
 	    m_device->UpdateDirLightBuffer(dir_lights.data(), dir_lights.size() * sizeof(DirectionalLight));
     }
-	globalUniform.spotLight_count = 0;
 
+    {
+        auto spotLightWiev = SystemsManager::GetRegistry()
+            .view<
+            gns::entity::EntityComponent,
+            gns::entity::Transform,
+            gns::rendering::LightComponent,
+			gns::rendering::SpotLightComponent,
+            gns::rendering::ColorComponent>();
+
+        std::vector<SpotLight> spot_lights = {};
+        spot_lights.reserve(spotLightWiev.size_hint());
+        globalUniform.spotLight_count = 0;
+        for (auto [entity_handle, entity, transform, light, spotLight, color] : spotLightWiev.each())
+        {
+            if (!entity.active)
+                continue;
+
+            globalUniform.spotLight_count++;
+            glm::vec3 forward = {
+                cosf(transform.rotation.x) * sinf(transform.rotation.y),
+                sinf(transform.rotation.x),
+                cosf(transform.rotation.x) * cosf(transform.rotation.y)
+            };
+            forward = glm::normalize(forward);
+
+            spot_lights.emplace_back(
+                transform.position.x, transform.position.y, transform.position.z,
+                spotLight.distance, spotLight.angle, 
+                light.intensity,
+                color.color.r, color.color.g, color.color.b,
+                forward.x, forward.y, forward.z);
+        }
+        m_device->UpdateSpotLightBuffer(spot_lights.data(), spot_lights.size() * sizeof(SpotLight));
+    }
     m_device->UpdateStorageBuffer(objects.data(), objects.size() * sizeof(ObjectDrawData));
-
-    //m_device->UpdateSpotLightBuffer(nullptr, 0);
 }
 
 void gns::rendering::Renderer::CreatePipelineForShader(Shader* shader)

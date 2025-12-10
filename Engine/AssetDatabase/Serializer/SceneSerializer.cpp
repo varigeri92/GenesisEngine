@@ -208,6 +208,15 @@ void gns::serialization::SceneSerializer::RegisterTable()
 			return static_cast<void*>(&component);
 		});
 
+	YamlComponentSerializationEntry::RegisterSerializableComponent<gns::rendering::SpotLightComponent>(
+		serializeFn,
+		[](gns::entityHandle entity_handle, YAML::Node& value)
+		{
+			gns::Entity entity = { entity_handle };
+			auto& component = entity.AddComponet<gns::rendering::SpotLightComponent>();
+			return static_cast<void*>(&component);
+		});
+
 
 	//-----------------------------------------
 	//------------ FIELDS: --------------------

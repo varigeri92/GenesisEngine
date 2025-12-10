@@ -30,7 +30,7 @@ namespace gns::rendering
 	{
 		DirectionalLight() = default;
 		DirectionalLight(float fwd_x, float fwd_y, float fwd_z, float cr, float cg, float cb, float intensity) :
-			forward(fwd_x, fwd_z, fwd_z, 0), color(cr, cg, cb, intensity) {
+			forward(fwd_x, fwd_y, fwd_z, 0), color(cr, cg, cb, intensity) {
 		};
 		glm::vec4 forward; // .w = unused
 		glm::vec4 color; // .w = intensity
@@ -38,7 +38,14 @@ namespace gns::rendering
 
 	struct SpotLight
 	{
-		glm::vec4 position; // .w = radius
+		SpotLight() = default;
+		SpotLight(float px, float py, float pz, float range, float agle, float intensity,
+			float cx, float cy, float cz, float dx, float dy, float dz) :
+		position(px, py, pz, range),
+		color(cx, cy,cz,intensity),
+		direction(dx,dy,dz,agle)
+	{}
+		glm::vec4 position; // .w = range
 		glm::vec4 color; // .w = intensity
 		glm::vec4 direction; // .w = angle
 	};
