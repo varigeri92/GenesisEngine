@@ -55,6 +55,13 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
     offscreen_Texture->handle = handle;
 
+    m_shadowMap = Object::Create<Texture>("shadow_map");
+    m_shadowMap->width = m_shadowMapSize;
+    m_shadowMap->height = m_shadowMapSize;
+
+    auto [sm_handle, sm_textureData] = CreateTexture({m_shadowMapSize, m_shadowMapSize, 1}, VK_FORMAT_R8G8B8A8_UNORM,
+        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+
     InitCommands();
     InitSyncStructures();
     InitDescriptors();
@@ -617,6 +624,31 @@ void gns::rendering::Device::UpdateMaterialData(VkDescriptorSet& set, Material& 
     image_writer.UpdateSet(m_device, set);
 }
 
+void gns::rendering::Device::DrawShadowMap(VkCommandBuffer cmd,
+    std::vector<ObjectDrawData>& objects,
+	std::vector<size_t>& indices,
+    std::vector<rendering::Mesh*>& meshes)
+{
+    m_shadowShader = Object::Find<Shader>("depth_only");
+    VkDescriptorSet perFrameDescriptor = GetCurrentFrame().frameDescriptors.Allocate(m_device, m_perFrameDescriptorLayout);
+    UpdatePerFrameDescriptors(perFrameDescriptor);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_shadowShader->shader.m_pipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        m_shadowShader->shader.m_pipelineLayout, 1, 1, &perFrameDescriptor, 0, nullptr);
+
+    for (size_t i = 0; i < indices.size(); i++)
+    {
+        size_t objectIndex = indices[i];
+        Mesh* mesh = meshes[i];
+        VulkanMesh& vkMesh = GetMesh(mesh->handle);
+
+        vkCmdBindIndexBuffer(cmd, vkMesh.indexBuffer.buffer, 0, vkMesh.indexType);
+        vkCmdDrawIndexed(cmd, vkMesh.indexBufferRange.count,
+            1, vkMesh.indexBufferRange.startIndex, 0, objectIndex);
+    }
+    //vkCmdEndRendering(cmd);
+}
+
 
 void gns::rendering::Device::Draw(
     std::vector<ObjectDrawData>& objects, 
@@ -647,9 +679,9 @@ void gns::rendering::Device::Draw(
 	utils::TransitionImage(cmd, m_swapchain.GetDepthImage().image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
     SetDrawStructs(cmd);
-
+    DrawShadowMap(cmd, objects, indices, meshes);
     DrawGeometry(cmd, objects, indices, meshes, materials);
-
+    vkCmdEndRendering(cmd);
     utils::TransitionImage(cmd, m_swapchain.GetRenderTargetImage().image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	utils::TransitionImage(cmd, m_swapchain.GetImage(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -716,7 +748,6 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
         vkCmdDrawIndexed(cmd, vkMesh.indexBufferRange.count,
             1, vkMesh.indexBufferRange.startIndex, 0, objectIndex);
     }
-    vkCmdEndRendering(cmd);
 }
 
 

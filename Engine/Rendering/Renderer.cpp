@@ -347,7 +347,7 @@ void gns::rendering::Renderer::CreatePipelineForShader(Shader* shader)
 
 
 
-gns::rendering::Shader* gns::rendering::Renderer::CreateShader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath)
+gns::rendering::Shader* gns::rendering::Renderer::CreateShader(const std::string& name, const std::string& vertexShaderPath, const std::string& fragmentShaderPath)
 {
     LOG_INFO(vertexShaderPath + fragmentShaderPath);
     size_t shader_guid = hashString(vertexShaderPath+fragmentShaderPath);
@@ -355,7 +355,7 @@ gns::rendering::Shader* gns::rendering::Renderer::CreateShader(const std::string
         return Object::Get<Shader>(shader_guid);
     
     
-    Shader* shader = Object::CreateWithGuid<rendering::Shader>(shader_guid, vertexShaderPath, fragmentShaderPath, "default_shader");
+    Shader* shader = Object::CreateWithGuid<rendering::Shader>(shader_guid, vertexShaderPath, fragmentShaderPath, name);
     CreatePipelineForShader(shader);
 	m_shaderCache.push_back(shader_guid);
 	return shader;

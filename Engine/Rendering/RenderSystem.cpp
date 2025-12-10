@@ -24,10 +24,10 @@ void gns::RenderSystem::SetActiveCamera(rendering::Camera* camera, entity::Trans
     m_cameraTransform = transform;
 }
 #pragma region resources
-gns::rendering::Shader* gns::RenderSystem::CreateShader(const std::string& vertexShaderPath,
+gns::rendering::Shader* gns::RenderSystem::CreateShader(const std::string& name, const std::string& vertexShaderPath,
 	const std::string& fragmentShaderPath)
 {
-    return  m_renderer->CreateShader(vertexShaderPath, fragmentShaderPath);
+    return  m_renderer->CreateShader(name, vertexShaderPath, fragmentShaderPath);
 }
 
 gns::rendering::Shader* gns::RenderSystem::ReCreateShader(const guid guid)
@@ -160,12 +160,18 @@ void gns::RenderSystem::InitSystem()
     m_renderer = new gns::rendering::Renderer(m_renderScreen);
 	m_renderer->InitImGui();
     m_offScreenRenderTargetTexture = Object::Find<rendering::Texture>("offscreen_texture");
-
-    const std::string v_shader_path = R"(Shaders\colored_triangle_mesh.vert)";
-    const std::string f_shader_path = R"(Shaders\tex_image.frag)";
-    rendering::Shader* shader = CreateShader(v_shader_path, f_shader_path);
-    rendering::Material* default_material = CreateMaterial(shader, "default_material");
-    ResetMaterialTextures(default_material);
+    {
+	    const std::string v_shader_path = R"(Shaders\colored_triangle_mesh.vert)";
+	    const std::string f_shader_path = R"(Shaders\tex_image.frag)";
+	    rendering::Shader* shader = CreateShader("default_shader", v_shader_path, f_shader_path);
+	    rendering::Material* default_material = CreateMaterial(shader, "default_material");
+	    ResetMaterialTextures(default_material);
+    }
+    {
+        const std::string v_shader_path = R"(Shaders\depth_only.vert)";
+        const std::string f_shader_path = R"(Shaders\depth_only.frag)";
+        rendering::Shader* depth_only_shader = CreateShader("depth_only", v_shader_path, f_shader_path);
+    }
 
     if (m_offScreenRenderTargetTexture == nullptr)
     {

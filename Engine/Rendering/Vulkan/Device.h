@@ -126,6 +126,9 @@ namespace gns::rendering
 		VulkanBuffer m_gpuSceneDataBuffer;
 
 		Texture* offscreen_Texture;
+		rendering::Texture* m_shadowMap;
+		const uint32_t m_shadowMapSize = 1024;
+
 		Resources resources;
 		// ------------------
 
@@ -162,6 +165,7 @@ namespace gns::rendering
 		static ImmeduateSubmitStruct sImmediateSubmitStruct;
 		Shader* m_currentBoundShader = nullptr;
 		Material* m_currentMaterial = nullptr;
+		Shader* m_shadowShader = nullptr;
 
 		size_t m_currentBoundShader_guid = 0;
 		size_t m_currentBoundMaterial_guid = 0;
@@ -193,6 +197,11 @@ namespace gns::rendering
 		void SetDrawStructs(VkCommandBuffer cmd);
 		void UpdatePerFrameDescriptors(VkDescriptorSet& perFrameSet);
 		void UpdateMaterialData(VkDescriptorSet& imageSet, Material& material);
+
+		void DrawShadowMap(VkCommandBuffer cmd, 
+			std::vector<ObjectDrawData>& objects,
+			std::vector<size_t>& indices,
+			std::vector<rendering::Mesh*>& meshes);
 
 		void DrawGeometry(VkCommandBuffer cmd, std::vector<ObjectDrawData>& objects, 
 			std::vector<size_t>& indices, 

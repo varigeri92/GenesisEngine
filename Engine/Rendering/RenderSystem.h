@@ -30,9 +30,9 @@ namespace gns
 		gns::rendering::Renderer* m_renderer;
 		rendering::Camera* m_camera;
 		entity::Transform* m_cameraTransform;
+		Screen* m_renderScreen;
 
 		rendering::Texture* m_offScreenRenderTargetTexture;
-		Screen* m_renderScreen;
 
 
 		void UpdateCamera();
@@ -49,7 +49,7 @@ namespace gns
 
 		GNS_API void SetActiveCamera(rendering::Camera* camera, entity::Transform* transform);
 
-		GNS_API rendering::Shader* CreateShader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
+		GNS_API rendering::Shader* CreateShader(const std::string& name,const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
 		GNS_API rendering::Shader* ReCreateShader(const guid guid);
 		GNS_API rendering::Shader* GetShader(guid guid);
 		GNS_API rendering::Shader* GetShader(const std::string& name);

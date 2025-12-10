@@ -59,6 +59,7 @@ namespace gns::rendering
 
 	private:
 		Screen* m_screen;
+
 		GlobalUniformData globalUniform;
 
 		std::vector<ObjectDrawData> objects;
@@ -75,7 +76,7 @@ namespace gns::rendering
 		void UpdateBuffers();
 		void BuildDrawData();
 		void CreatePipelineForShader(Shader* shader);
-		Shader* CreateShader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
+		Shader* CreateShader(const std::string& name, const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
 		Shader* ReCreateShader(const guid guid);
 		void WaitForGPUIddle();
 
@@ -93,11 +94,5 @@ namespace gns::rendering
 		TextureHandle CreateTexture(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
 		TextureHandle CreateTexture(VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
 		VulkanTexture& GetTexture(TextureHandle handle);
-		/*
-		VulkanImage CreateImage(
-			void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
-		VulkanImage CreateImage(
-			VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
-		 */
 	};
 }
