@@ -67,7 +67,12 @@ vec3 calculateNormal(vec3 tangentNormal)
 }
 
 void PBR_Main(){
-	
+	float alpha = texture(albedoTexture,inUV).a;
+	if(alpha < 0.5){
+		discard;
+		return;
+	}
+
 	vec3 mrt = texture(metallicRoughnessTexture,inUV).xyz;
 	float metallic = mrt.r * material.metallic_roughness_AO_emission.r;
 	float roughness = mrt.g * material.metallic_roughness_AO_emission.b;
