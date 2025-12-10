@@ -35,6 +35,7 @@ namespace gns
 		REGISTER_COMPONENT(rendering::PointLightComponent);
 		REGISTER_COMPONENT(rendering::SpotLightComponent);
 		REGISTER_COMPONENT(rendering::ColorComponent);
+		REGISTER_COMPONENT(rendering::LightComponent);
 
 
 		serialization::SceneSerializer::RegisterTable();

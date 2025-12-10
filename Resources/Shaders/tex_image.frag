@@ -91,47 +91,93 @@ void PBR_Main(){
 
 	// reflectance equation
 	vec3 Lo = vec3(0.0);
-	for(int i=0;i<sceneData.pointLight_count;++i)
+	vec3 Lo_dir = vec3(0.0);
+/*
+*/
+	for(int i=0; i<sceneData.dirLight_count; ++i)
 	{
-		// calculate per-light radiance
-		vec3 L = normalize(pointLights.objects[i].position.xyz - inFragPosition);
-		vec3 H = normalize(V + L);
-		float distance = length(pointLights.objects[i].position.xyz - inFragPosition);
-		float attenuation = 1.0 / (distance * distance);
-		vec3 radiance = pointLights.objects[i].color.xyz * attenuation * pointLights.objects[i].color.w;
+		vec3 lightForward = dirLights.objects[i].direction.xyz;
 
-		// Cook-Torrance BRDF
+		// Fragment-to-light direction
+		vec3 L = -lightForward;
+		vec3 H = normalize(V + L);
+
+		vec3 lightColor = dirLights.objects[i].color.xyz;
+		float intensity = dirLights.objects[i].color.w;
+
+		// No attenuation for directional lights
+		vec3 radiance = lightColor * intensity;
+
+		// Cook–Torrance BRDF
 		float NDF = DistributionGGX(N, H, roughness);
 		float G   = GeometrySmith(N, V, L, roughness);
 		vec3 F    = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);
 
 		vec3 numerator    = NDF * G * F;
-		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001; // + 0.0001 to prevent divide by zero
-		vec3 specular = numerator / denominator;
+		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+		vec3 specular     = numerator / denominator;
 
-		// kS is equal to Fresnel
 		vec3 kS = F;
-		// for energy conservation, the diffuse and specular light can't
-		// be above 1.0 (unless the surface emits light); to preserve this
-		// relationship the diffuse component (kD) should equal 1.0 - kS.
 		vec3 kD = vec3(1.0) - kS;
-		// multiply kD by the inverse metalness such that only non-metals 
-		// have diffuse lighting, or a linear blend if partly metal (pure metals
-		// have no diffuse light).
 		kD *= 1.0 - metallic;
 
-		// scale light by NdotL
 		float NdotL = max(dot(N, L), 0.0);
 
-		// add to outgoing radiance Lo
-		Lo += (kD * albedo / PI + specular) * radiance * NdotL;  // note that we already multiplied the BRDF by the Fresnel (kS) so we won't multiply by kS again
+		Lo_dir += (kD * albedo / PI + specular) * radiance * NdotL;
+	}
+
+
+	for(int i=0;i<sceneData.pointLight_count;++i)
+	{
+		vec3 lightPos = pointLights.objects[i].position.xyz;
+		vec3 L        = lightPos - inFragPosition;
+		float distance = length(L);
+		L = L / distance; // normalize
+
+		float range = pointLights.objects[i].position.w;
+
+		// Hard cutoff (cheap + simple)
+		if (distance > range)
+			continue;
+
+		// Base inverse-square falloff
+		float invDist2 = 1.0 / (distance * distance);
+
+		// Optional smooth range falloff so it fades out nicely near the edge
+		float x = clamp(distance / range, 0.0, 1.0);
+		float rangeFalloff = 1.0 - x * x;      // quadratic
+		rangeFalloff *= rangeFalloff;         // ^4 for smoother edge
+
+		float attenuation = invDist2 * rangeFalloff;
+
+		vec3 lightColor = pointLights.objects[i].color.xyz;
+		float intensity = pointLights.objects[i].color.w;
+		vec3 radiance   = lightColor * intensity * attenuation;
+
+		vec3 H = normalize(V + L);
+
+		float NDF = DistributionGGX(N, H, roughness);
+		float G   = GeometrySmith(N, V, L, roughness);
+		vec3 F    = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);
+
+		vec3 numerator    = NDF * G * F;
+		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+		vec3 specular     = numerator / denominator;
+
+		vec3 kS = F;
+		vec3 kD = vec3(1.0) - kS;
+		kD *= 1.0 - metallic;
+
+		float NdotL = max(dot(N, L), 0.0);
+
+		Lo += (kD * albedo / PI + specular) * radiance * NdotL;
 	}
 
 	// ambient lighting (note that the next IBL tutorial will replace 
 	// this ambient lighting with environment lighting).
-	vec3 ambient = vec3(0.03) * albedo * ao;
+	vec3 ambient = vec3(0) * albedo * ao;
 
-	vec3 color = ambient + Lo;
+	vec3 color = ambient + (Lo + Lo_dir);
 
 	// HDR tonemapping
 	color = color / (color + vec3(1.0));

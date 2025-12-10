@@ -20,5 +20,6 @@ namespace gns::editor::entity
 
 	private:
 		void CreatePointLightEmpty(Entity& entity);
+		void CreateDirectionalLightEmpty(Entity& entity);
 	};
 }

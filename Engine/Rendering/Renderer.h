@@ -29,7 +29,7 @@ namespace gns::rendering
 {
 	class Device;
 
-	struct GlobalUniformData {
+	struct alignas(64) GlobalUniformData {
 		glm::mat4 view;
 		glm::mat4 proj;
 		glm::mat4 viewProj;

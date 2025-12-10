@@ -199,6 +199,15 @@ void gns::serialization::SceneSerializer::RegisterTable()
 			component.material_ref = 0;
 			return static_cast<void*>(&component);
 		});
+	YamlComponentSerializationEntry::RegisterSerializableComponent<gns::rendering::LightComponent>(
+		serializeFn,
+		[](gns::entityHandle entity_handle, YAML::Node& value)
+		{
+			gns::Entity entity = { entity_handle };
+			auto& component = entity.AddComponet<gns::rendering::LightComponent>();
+			return static_cast<void*>(&component);
+		});
+
 
 	//-----------------------------------------
 	//------------ FIELDS: --------------------

@@ -80,6 +80,12 @@ struct SpotLight
     vec4 direction; // .w = angle
 };
 
+struct DirLight
+{
+    vec4 direction; // .w = unused
+    vec4 color; // .w = intensity
+};
+
 layout(std140, set = 1, binding = 2) readonly buffer PointLightBuffer{
     PointLight objects[];
 } pointLights;
@@ -87,6 +93,11 @@ layout(std140, set = 1, binding = 2) readonly buffer PointLightBuffer{
 layout(std140, set = 1, binding = 3) readonly buffer SpotLightBuffer{
     SpotLight objects[];
 } spotLights;
+
+layout(std140, set = 1, binding = 4) readonly buffer DirLightBuffer{
+    DirLight objects[];
+} dirLights;
+
 #endif
 
 //Shared

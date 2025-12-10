@@ -74,6 +74,9 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
     m_spotLightStorageBuffer = VulkanBuffer::Create(m_allocator, sizeof(SpotLight) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
+    m_dirLightStorageBuffer = VulkanBuffer::Create(m_allocator, sizeof(SpotLight) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
 }
 
 
@@ -397,6 +400,7 @@ void gns::rendering::Device::InitDescriptors()
         builder.AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // object buffer
         builder.AddBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // point light buffer
         builder.AddBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // spot light buffer
+        builder.AddBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // spot light buffer
         m_perFrameDescriptorLayout = builder.Build(m_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     }
 
@@ -469,24 +473,19 @@ void gns::rendering::Device::ImmediateSubmit(VkDevice device, VkQueue queue, std
 void gns::rendering::Device::UpdateUniformBuffer(void* data, const VulkanBuffer& buffer)
 {
     void* dataPtr = (buffer.allocation->GetMappedData());
-    if (dataPtr != nullptr)
-        memcpy(dataPtr, data, buffer.bufferSize);
-    else
-        std::cout << "SHIT!";
+    memcpy(dataPtr, data, buffer.bufferSize);
 }
 
 void gns::rendering::Device::UpdateGlobalUbo(void* data, size_t size)
 {
     void* dataPtr = (m_gpuSceneDataBuffer.allocation->GetMappedData());
     memcpy(dataPtr, data, size);
-
 }
 
 void gns::rendering::Device::UpdateStorageBuffer(void* data, size_t size)
 {
     void* dataPtr = (m_objectStorageBuffer.allocation->GetMappedData());
     memcpy(dataPtr, data, size);
-
 }
 
 void gns::rendering::Device::UpdatePointLightBuffer(void* data, size_t size)
@@ -498,6 +497,12 @@ void gns::rendering::Device::UpdatePointLightBuffer(void* data, size_t size)
 void gns::rendering::Device::UpdateSpotLightBuffer(void* data, size_t size)
 {
     void* dataPtr = (m_spotLightStorageBuffer.allocation->GetMappedData());
+    memcpy(dataPtr, data, size);
+}
+
+void gns::rendering::Device::UpdateDirLightBuffer(void* data, size_t size)
+{
+    void* dataPtr = (m_dirLightStorageBuffer.allocation->GetMappedData());
     memcpy(dataPtr, data, size);
 }
 #pragma endregion
@@ -592,6 +597,9 @@ void gns::rendering::Device::UpdatePerFrameDescriptors(VkDescriptorSet& perFrame
 
 	writer.WriteBuffer(3, m_spotLightStorageBuffer.buffer,
         m_spotLightStorageBuffer.bufferSize, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+
+    writer.WriteBuffer(4, m_dirLightStorageBuffer.buffer,
+        m_dirLightStorageBuffer.bufferSize, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 
 	writer.UpdateSet(m_device, perFrameSet);
 }

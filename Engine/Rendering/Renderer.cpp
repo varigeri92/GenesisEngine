@@ -241,28 +241,63 @@ void gns::rendering::Renderer::BuildDrawData()
         }
     }
 
-    auto pointLight_view = SystemsManager::GetRegistry()
-	.view<gns::entity::EntityComponent,
-		gns::entity::Transform,
-		gns::rendering::PointLightComponent,
-		gns::rendering::ColorComponent>();
-
-	std::vector<PointLight> point_lights = {};
-    point_lights.reserve(pointLight_view.size_hint());
-    for (auto [entt, entity, transform, pointLight, color] : pointLight_view.each())
     {
-        if (!entity.active)
-            continue;
-        point_lights.emplace_back(
-			transform.position.x, transform.position.y, transform.position.z, pointLight.radius, 
-            color.color.r, color.color.g, color.color.b, pointLight.intensity);
+	    auto pointLight_view = SystemsManager::GetRegistry()
+		.view<gns::entity::EntityComponent,
+			gns::entity::Transform,
+			gns::rendering::LightComponent,
+			gns::rendering::PointLightComponent,
+			gns::rendering::ColorComponent>();
+
+		std::vector<PointLight> point_lights = {};
+        globalUniform.pointLight_count = 0;
+	    point_lights.reserve(pointLight_view.size_hint());
+	    for (auto [entt, entity, transform, light, pointLight, color] : pointLight_view.each())
+	    {
+	        if (!entity.active)
+	            continue;
+		    globalUniform.pointLight_count++;
+	        point_lights.emplace_back(
+				transform.position.x, transform.position.y, transform.position.z, pointLight.radius, 
+	            color.color.r, color.color.g, color.color.b, light.intensity);
+	    }
+		m_device->UpdatePointLightBuffer(point_lights.data(), point_lights.size() * sizeof(PointLight));
+	}
+    {
+	    
+	    auto dirLightWiev = SystemsManager::GetRegistry()
+	        .view<
+	        gns::entity::EntityComponent,
+	        gns::entity::Transform,
+	        gns::rendering::LightComponent,
+	        gns::rendering::ColorComponent>(entt::exclude<gns::rendering::PointLightComponent>);
+
+	    std::vector<DirectionalLight> dir_lights = {};
+	    dir_lights.reserve(dirLightWiev.size_hint());
+	    globalUniform.dirLight_count = 0;
+	    for (auto [entity_handle, entity, transform, light, color] : dirLightWiev.each())
+	    {
+	        if (!entity.active)
+	            continue;
+
+            globalUniform.dirLight_count++;
+	        glm::vec3 forward = {
+	            cosf(transform.rotation.x) * sinf(transform.rotation.y),
+	            sinf(transform.rotation.x),
+	            cosf(transform.rotation.x) * cosf(transform.rotation.y)
+	        };
+	        forward = glm::normalize(forward);
+
+	        dir_lights.emplace_back(
+	            forward.x, forward.y, forward.z,
+	            color.color.r, color.color.g, color.color.b, light.intensity);
+	    }
+	    m_device->UpdateDirLightBuffer(dir_lights.data(), dir_lights.size() * sizeof(DirectionalLight));
     }
-    globalUniform.pointLight_count = point_lights.size();
-    globalUniform.spotLight_count = 0;
-    globalUniform.dirLight_count = 0;
+	globalUniform.spotLight_count = 0;
 
     m_device->UpdateStorageBuffer(objects.data(), objects.size() * sizeof(ObjectDrawData));
-    m_device->UpdatePointLightBuffer(point_lights.data(), point_lights.size() * sizeof(PointLight));
+
     //m_device->UpdateSpotLightBuffer(nullptr, 0);
 }
 
@@ -312,7 +347,6 @@ void gns::rendering::Renderer::Draw()
         m_device->m_screen->resized = false;
         Texture* texture = Object::Find<Texture>("offscreen_texture");
         VulkanTexture& vkTexture = m_device->GetTexture(texture->handle);
-
 
         vkTexture.Destroy();
         vkTexture.image = VulkanImage::Create(*m_device, { m_device->m_screen->width, m_device->m_screen->height, 1}

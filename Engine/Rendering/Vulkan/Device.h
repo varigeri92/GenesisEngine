@@ -122,6 +122,7 @@ namespace gns::rendering
 		VulkanBuffer m_objectStorageBuffer;
 		VulkanBuffer m_pointLightStorageBuffer;
 		VulkanBuffer m_spotLightStorageBuffer;
+		VulkanBuffer m_dirLightStorageBuffer;
 		VulkanBuffer m_gpuSceneDataBuffer;
 
 		Texture* offscreen_Texture;
@@ -203,6 +204,7 @@ namespace gns::rendering
 		void UpdateStorageBuffer(void* data, size_t size);
 		void UpdatePointLightBuffer(void* data, size_t size);
 		void UpdateSpotLightBuffer(void* data, size_t size);
+		void UpdateDirLightBuffer(void* data, size_t size);
 
 		static void ImmediateSubmit(VkDevice device, VkQueue queue, std::function<void(VkCommandBuffer cmd)>&& function);
 		void DrawImGui(VkCommandBuffer cmd, VkImageView targetImageView);
