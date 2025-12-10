@@ -73,6 +73,7 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
 
     m_spotLightStorageBuffer = VulkanBuffer::Create(m_allocator, sizeof(SpotLight) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
 }
 
 
@@ -674,8 +675,8 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
     for(size_t i = 0; i < indices.size(); i++)
     {
         size_t objectIndex = indices[i];
-        Material* material = materials[i];
         Mesh* mesh = meshes[i];
+        Material* material = materials[i];
         VulkanMesh& vkMesh = GetMesh(mesh->handle);
         if (material->shader != m_currentBoundShader)
         {
@@ -697,7 +698,7 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
             m_currentMaterial = material;
         }
 
-        PushConstants push_constants;
+        PushConstants push_constants{};
         push_constants.vertexBuffer = objects[objectIndex].vertexBufferAddress;
         push_constants.worldMatrix = objects[objectIndex].objectMatrix;
 

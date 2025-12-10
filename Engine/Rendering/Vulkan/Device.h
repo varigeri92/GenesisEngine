@@ -4,7 +4,6 @@
 #include <functional>
 #include <span>
 
-#include "RenderGraph.h"
 #include "Swapchain.h"
 #include "Utils/vkutils.h"
 #include "VkBootstrap.h"
@@ -45,24 +44,6 @@ namespace gns
 
 namespace gns::rendering
 {
-	struct DeletionQueue
-	{
-		std::deque<std::function<void()>> deletors;
-
-		void Push(std::function<void()>&& function);
-
-		void Flush();
-	};
-
-	struct FrameData {
-		VkSemaphore presentSemaphore;
-		VkSemaphore renderSemaphore;
-		VkFence renderFence;
-		VkCommandPool commandPool;
-		VkCommandBuffer mainCommandBuffer;
-		DeletionQueue deletionQueue;
-		DescriptorAllocatorGrowable frameDescriptors;
-	};
 
 	struct ComputePushConstants {
 		glm::vec4 data1;
@@ -131,7 +112,6 @@ namespace gns::rendering
 
 	private:
 		Screen* m_screen;
-		RenderGraph renderGraph;
 		// Move this for sure:
 		std::vector<ComputeEffect> backgroundEffects;
 		int currentBackgroundEffect{ 0 };

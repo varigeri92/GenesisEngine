@@ -1,10 +1,30 @@
 ﻿#pragma once
+#include "VkDescriptors.h"
 #include "vkutils.h"
 #include "glm/glm.hpp"
 
 namespace gns::rendering
 {
 	class Device;
+
+	struct DeletionQueue
+	{
+		std::deque<std::function<void()>> deletors;
+
+		void Push(std::function<void()>&& function);
+
+		void Flush();
+	};
+
+	struct FrameData {
+		VkSemaphore presentSemaphore;
+		VkSemaphore renderSemaphore;
+		VkFence renderFence;
+		VkCommandPool commandPool;
+		VkCommandBuffer mainCommandBuffer;
+		DeletionQueue deletionQueue;
+		DescriptorAllocatorGrowable frameDescriptors;
+	};
 
 	struct VulkanBuffer
 	{
@@ -173,33 +193,5 @@ namespace gns::rendering
 		Graphics,
 		Compute,
 		Transfer
-	};
-
-	struct RenderPassContext
-	{
-		VkDevice device{ VK_NULL_HANDLE };
-		VkCommandBuffer cmd { VK_NULL_HANDLE };
-		VkPipeline pipeline { VK_NULL_HANDLE };
-		VkPipelineBindPoint bindPoint { VK_PIPELINE_BIND_POINT_COMPUTE };
-		VkShaderStageFlags shaderStages{ VK_SHADER_STAGE_ALL };
-		VkPipelineLayout pipelineLayout{ VK_NULL_HANDLE };
-		VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
-	};
-
-	struct RenderPassData
-	{
-		bool writeDepth;
-		bool writeColor;
-		PassType passType;
-		VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
-		VulkanShader* shaderOverride {nullptr};
-	};
-	
-	struct RenderPass
-	{
-		std::string name = "Invalid Pass";
-		RenderPassData data {};
-		RenderPassContext ctx {};
-		std::function<void(RenderPass&)> record {nullptr};
 	};
 }
