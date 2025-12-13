@@ -153,6 +153,11 @@ ImTextureID gns::RenderSystem::GetImGuiTexture(TextureHandle handle)
 {
     return  reinterpret_cast<ImTextureID>(m_renderer->GetTexture(handle).descriptorSet);
 }
+
+gns::rendering::LightingSettings* gns::RenderSystem::GetLightningSettings()
+{
+	return &m_lightingSettings;
+}
 #pragma endregion
 
 void gns::RenderSystem::InitSystem()
@@ -171,6 +176,8 @@ void gns::RenderSystem::InitSystem()
         const std::string v_shader_path = R"(Shaders\depth_only.vert)";
         const std::string f_shader_path = R"(Shaders\depth_only.frag)";
         rendering::Shader* depth_only_shader = CreateShader("depth_only", v_shader_path, f_shader_path);
+        depth_only_shader->front = false;
+        ReCreateShader(depth_only_shader->getGuid());
     }
 
     if (m_offScreenRenderTargetTexture == nullptr)
@@ -239,15 +246,19 @@ void gns::RenderSystem::UpdateCamera()
     m_renderer->globalUniform.proj = m_camera->m_projection;
     m_renderer->globalUniform.viewProj = m_camera->m_cameraMatrix;
     m_renderer->globalUniform.camPosition = { m_cameraTransform->position.x, m_cameraTransform->position.y,m_cameraTransform->position.z, 1 };
+
+    m_renderer->m_lightingSettings.normalOffset = m_lightingSettings.normalOffset;
+    m_renderer->m_lightingSettings.shadowBias = m_lightingSettings.shadowBias;
+    m_renderer->m_lightingSettings.slopeScale = m_lightingSettings.slopeScale;
+    m_renderer->m_lightingSettings.halfExtent = m_lightingSettings.halfExtent;
+    m_renderer->m_lightingSettings.nearPlane = m_lightingSettings.nearPlane;
+    m_renderer->m_lightingSettings.farPlane = m_lightingSettings.farPlane;
 }
 
 
 void gns::RenderSystem::BeginGuiFrame()
 {
     m_renderer->BeginGuiFrame();
-
-    m_renderer->globalUniform.sunlightDirection = { 1,0,0,1 };
-    m_renderer->globalUniform.sunlightColor = { 0,1,0,1 };
 }
 
 void gns::RenderSystem::EndGuiFrame()

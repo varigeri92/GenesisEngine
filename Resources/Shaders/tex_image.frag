@@ -93,11 +93,60 @@ vec3 EvaluateBRDF(vec3 N, vec3 V, vec3 L,
     return (kD * albedo / PI + spec) * NdotL;
 }
 
+float ComputeShadowFactor(vec3 worldPos, vec3 N, vec3 L)
+{
+    vec4 lightClip = sceneData.dirLightViewProj * vec4(worldPos, 1.0);
+    vec3 ndc = lightClip.xyz / lightClip.w;
+
+    // outside clip, treat as lit
+    if (ndc.z > 1.0 || ndc.z < 0.0)
+        return 1.0;
+
+    vec2 uv = ndc.xy * 0.5 + 0.5;
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+        return 1.0;
+
+    float currentDepth = ndc.z;
+
+    // -------- slope-scaled bias --------
+    float cosTheta   = max(dot(N, L), 0.0);
+
+    // tweak these two:
+    float minBias    = 0.0003;   // base bias
+    float slopeScale = 0.0020;   // extra bias at grazing angles
+
+    float bias = max(minBias, slopeScale * (1.0 - cosTheta));
+    // -----------------------------------
+
+    // -------- PCF filtering (3x3 kernel) --------
+    vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0));
+
+    float visibility = 0.0;
+    const int kernel = 1; // 1 = 3x3, 2 = 5x5, etc.
+
+    for (int x = -kernel; x <= kernel; ++x)
+    {
+        for (int y = -kernel; y <= kernel; ++y)
+        {
+            vec2 sampleUV = uv + vec2(x, y) * texelSize;
+
+            // optional: clamp, or just rely on the early-out above
+            // sampleUV = clamp(sampleUV, vec2(0.0), vec2(1.0));
+
+            float shadowDepth = texture(shadowMap, sampleUV).g;
+            visibility += (currentDepth - bias > shadowDepth) ? 0.0 : 1.0;
+        }
+    }
+
+    visibility /= float((kernel * 2 + 1) * (kernel * 2 + 1));
+    return visibility;
+}
+
 vec3 AccumulateDirectionalLights(vec3 N, vec3 V,
-                                 vec3 albedo, float metallic, float roughness, vec3 F0)
+                                 vec3 albedo, float metallic, float roughness, vec3 F0,
+                                 vec3 worldPos)
 {
     vec3 Lo = vec3(0.0);
-
     for (int i = 0; i < sceneData.dirLight_count; ++i)
     {
         vec3 lightForward = dirLights.objects[i].direction.xyz;
@@ -113,7 +162,8 @@ vec3 AccumulateDirectionalLights(vec3 N, vec3 V,
 
         vec3 brdf = EvaluateBRDF(N, V, L, albedo, metallic, roughness, F0);
 
-        Lo += brdf * radiance;
+        float shadow = ComputeShadowFactor(worldPos, N, L);
+        Lo += brdf * radiance * shadow;
     }
 
     return Lo;
@@ -265,7 +315,7 @@ void PBR_Main()
 
     // Directional and point lights
     vec3 Lo = vec3(0); 
-	Lo += AccumulateDirectionalLights(N, V, albedo, metallic, roughness, F0);
+	Lo += AccumulateDirectionalLights(N, V, albedo, metallic, roughness, F0, inFragPosition);
     Lo += AccumulatePointLights(N, V, albedo, metallic, roughness, F0);
 	Lo += AccumulateSpotLights(N, V, albedo, metallic, roughness, F0);
 
@@ -281,6 +331,7 @@ void PBR_Main()
     color = pow(color, vec3(1.0 / 2.2));
 
     outFragColor = vec4(color + emission, 1.0);
+    //outFragColor = vec4(texture(shadowMap, inUV).xyz, 1);
 }
 
 void main()

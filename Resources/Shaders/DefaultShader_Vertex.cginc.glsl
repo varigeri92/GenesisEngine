@@ -66,6 +66,7 @@ layout(set = 0, binding = 2) uniform sampler2D normalTexture;
 layout(set = 0, binding = 3) uniform sampler2D metallicRoughnessTexture;
 layout(set = 0, binding = 4) uniform sampler2D aoTexture;
 layout(set = 0, binding = 5) uniform sampler2D emissiveTexture;
+layout(set = 0, binding = 6) uniform sampler2D shadowMap;
 
 struct PointLight
 {
@@ -105,10 +106,8 @@ layout(set = 1, binding = 0) uniform  SceneData{
     mat4 view;
     mat4 proj;
     mat4 viewproj;
+    mat4 dirLightViewProj;
     vec4 camPosition;
-    vec4 ambientColor;
-    vec4 sunlightDirection; // w for sun power
-    vec4 sunlightColor;
     uint pointLight_count;
     uint spotLight_count;
     uint dirLight_count;

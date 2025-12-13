@@ -82,6 +82,8 @@ void LoadEmbededTextures(gns::RenderSystem* renderSystem, gns::rendering::Materi
 void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const std::vector<guid>&, const std::vector<guid>&)>& onLoadSuccess_callback)
 {
     std::string assetDir = gns::fileUtils::GetContainingDirectory(mesh_asset.src_path);
+    if (assetDir == "")
+        assetDir = PathHelper::AssetsPath;
     LOG_INFO(assetDir);
     Assimp::Importer importer;
 

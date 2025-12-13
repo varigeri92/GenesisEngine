@@ -66,5 +66,9 @@ namespace gns::fileUtils
         {
             return file_path.substr(0, last_slash_idx);
         }
+        else
+        {
+            return "";
+        }
 	}
 }

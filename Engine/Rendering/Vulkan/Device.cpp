@@ -59,8 +59,23 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
     m_shadowMap->width = m_shadowMapSize;
     m_shadowMap->height = m_shadowMapSize;
 
-    auto [sm_handle, sm_textureData] = CreateTexture({m_shadowMapSize, m_shadowMapSize, 1}, VK_FORMAT_R8G8B8A8_UNORM,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+    auto [sm_handle, sm_textureData] = CreateTexture({m_shadowMapSize, m_shadowMapSize, 1}, 
+        VK_FORMAT_D32_SFLOAT,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+        VK_IMAGE_USAGE_SAMPLED_BIT |
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+    m_shadowMap->handle = sm_handle;
+
+    m_ShadowTexture_debug = Object::Create<Texture>("shadow_map_debug");
+    m_ShadowTexture_debug->width = m_shadowMapSize;
+    m_ShadowTexture_debug->height = m_shadowMapSize;
+    auto [smd_handle, smd_textureData] = CreateTexture({ m_shadowMapSize, m_shadowMapSize, 1 },
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_IMAGE_USAGE_SAMPLED_BIT |
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    m_ShadowTexture_debug->handle = smd_handle;
 
     InitCommands();
     InitSyncStructures();
@@ -214,6 +229,7 @@ void gns::rendering::Device::CreatePipeline(Shader& shader)
         builder.AddBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         builder.AddBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         builder.AddBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        builder.AddBinding(6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         shader.shader.m_descriptorSetLayout = builder.Build(m_device, VK_SHADER_STAGE_FRAGMENT_BIT);
     }
 
@@ -233,7 +249,10 @@ void gns::rendering::Device::CreatePipeline(Shader& shader)
         pipelineBuilder.SetShaders(shader);
         pipelineBuilder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
         pipelineBuilder.SetPolygonMode(VK_POLYGON_MODE_FILL);
-        pipelineBuilder.SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+
+    	const VkCullModeFlags cullMode = shader.front ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_FRONT_BIT;
+
+        pipelineBuilder.SetCullMode(cullMode, VK_FRONT_FACE_COUNTER_CLOCKWISE);
         pipelineBuilder.SetMultisampling(false);
         pipelineBuilder.SetBlending(PipelineBuilder::BlendingMode::disabled);
         pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_LESS_OR_EQUAL);
@@ -562,22 +581,13 @@ void gns::rendering::Device::DrawBackground(VkCommandBuffer cmd)
         std::ceil(static_cast<float>(drawExtent.height) / 16.0f), 1);
 }
 
-void gns::rendering::Device::SetDrawStructs(VkCommandBuffer cmd)
+void gns::rendering::Device::SetDrawStructs(VkCommandBuffer cmd, uint32_t width, uint32_t height)
 {
-
-    VkRenderingAttachmentInfo colorAttachment = 
-        utils::AttachmentInfo(m_swapchain.GetRenderTargetImage().imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    VkRenderingAttachmentInfo depthAttachment = 
-        utils::DepthAttachmentInfo(m_swapchain.GetDepthImage().imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-    VkRenderingInfo renderInfo = utils::RenderingInfo(m_swapchain.GetExtent(), &colorAttachment, &depthAttachment);
-
-    vkCmdBeginRendering(cmd, &renderInfo);
-
     VkViewport viewport = {};
     viewport.x = 0;
     viewport.y = 0;
-    viewport.width = static_cast<float>(m_swapchain.GetExtent().width);
-    viewport.height = static_cast<float>(m_swapchain.GetExtent().height);
+    viewport.width = static_cast<float>(width);
+    viewport.height = static_cast<float>(height);
     viewport.minDepth = 0.f;
     viewport.maxDepth = 1.f;
     vkCmdSetViewport(cmd, 0, 1, &viewport);
@@ -585,8 +595,8 @@ void gns::rendering::Device::SetDrawStructs(VkCommandBuffer cmd)
     VkRect2D scissor = {};
     scissor.offset.x = 0;
     scissor.offset.y = 0;
-    scissor.extent.width = m_swapchain.GetExtent().width;
-    scissor.extent.height = m_swapchain.GetExtent().height;
+    scissor.extent.width = width;
+    scissor.extent.height = height;
     vkCmdSetScissor(cmd, 0, 1, &scissor);
 }
 
@@ -621,6 +631,8 @@ void gns::rendering::Device::UpdateMaterialData(VkDescriptorSet& set, Material& 
     	const VulkanImage& vulkanImage = (vkTexture.image);
 		image_writer.WriteImage(i+1, vulkanImage.imageView, vkTexture.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     }
+    VulkanTexture& vkTex = GetTexture(m_ShadowTexture_debug->handle);
+    image_writer.WriteImage(6, vkTex.image.imageView, vkTex.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     image_writer.UpdateSet(m_device, set);
 }
 
@@ -629,6 +641,19 @@ void gns::rendering::Device::DrawShadowMap(VkCommandBuffer cmd,
 	std::vector<size_t>& indices,
     std::vector<rendering::Mesh*>& meshes)
 {
+
+    VulkanTexture& shadow_colorImage = GetTexture(m_ShadowTexture_debug->handle);
+    VulkanTexture& shadow_depthImage = GetTexture(m_shadowMap->handle);
+
+    VkClearValue clearColor = {0,0,0,1};
+    VkRenderingAttachmentInfo sm_colorAttachment =
+        utils::AttachmentInfo(shadow_colorImage.image.imageView, &clearColor, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingAttachmentInfo sm_depthAttachment =
+        utils::DepthAttachmentInfo(shadow_depthImage.image.imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo renderInfo =
+        utils::RenderingInfo({ m_shadowMapSize,m_shadowMapSize }, &sm_colorAttachment, &sm_depthAttachment);
+    vkCmdBeginRendering(cmd, &renderInfo);
+
     m_shadowShader = Object::Find<Shader>("depth_only");
     VkDescriptorSet perFrameDescriptor = GetCurrentFrame().frameDescriptors.Allocate(m_device, m_perFrameDescriptorLayout);
     UpdatePerFrameDescriptors(perFrameDescriptor);
@@ -646,7 +671,8 @@ void gns::rendering::Device::DrawShadowMap(VkCommandBuffer cmd,
         vkCmdDrawIndexed(cmd, vkMesh.indexBufferRange.count,
             1, vkMesh.indexBufferRange.startIndex, 0, objectIndex);
     }
-    //vkCmdEndRendering(cmd);
+    vkCmdEndRendering(cmd);
+    utils::TransitionImage(cmd, shadow_colorImage.image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 
@@ -677,11 +703,20 @@ void gns::rendering::Device::Draw(
 
     utils::TransitionImage(cmd, m_swapchain.GetRenderTargetImage().image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	utils::TransitionImage(cmd, m_swapchain.GetDepthImage().image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-
-    SetDrawStructs(cmd);
+    SetDrawStructs(cmd, m_shadowMapSize, m_shadowMapSize);
     DrawShadowMap(cmd, objects, indices, meshes);
+	SetDrawStructs(cmd, m_swapchain.GetExtent().width, m_swapchain.GetExtent().height);
+
+	VkRenderingAttachmentInfo colorAttachment =
+        utils::AttachmentInfo(m_swapchain.GetRenderTargetImage().imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingAttachmentInfo depthAttachment =
+        utils::DepthAttachmentInfo(m_swapchain.GetDepthImage().imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo renderInfo = utils::RenderingInfo(m_swapchain.GetExtent(), &colorAttachment, &depthAttachment);
+    vkCmdBeginRendering(cmd, &renderInfo);
+
     DrawGeometry(cmd, objects, indices, meshes, materials);
     vkCmdEndRendering(cmd);
+
     utils::TransitionImage(cmd, m_swapchain.GetRenderTargetImage().image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	utils::TransitionImage(cmd, m_swapchain.GetImage(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 

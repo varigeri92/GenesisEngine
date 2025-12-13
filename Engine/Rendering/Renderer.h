@@ -33,10 +33,8 @@ namespace gns::rendering
 		glm::mat4 view;
 		glm::mat4 proj;
 		glm::mat4 viewProj;
+		glm::mat4 dirLightViewProj;
 		glm::vec4 camPosition;
-		glm::vec4 ambientColor; //w -> intensity
-		glm::vec4 sunlightDirection; // w for sun power
-		glm::vec4 sunlightColor;
 		uint32_t pointLight_count;
 		uint32_t spotLight_count;
 		uint32_t dirLight_count;
@@ -44,6 +42,17 @@ namespace gns::rendering
 		float gamma;
 	};
 
+	struct LightingSettings_Internal
+	{
+		uint32_t shadowMapSize{ 1024 };
+		uint32_t pcf_kernelSize{ 3 };
+		float normalOffset{ 0.001f };
+		float shadowBias{ 0.001f };
+		float slopeScale{ 0.001f };
+		float halfExtent{ 10.f };
+		float nearPlane{ 1.f };
+		float farPlane{ 1.f };
+	};
 
 	class Renderer
 	{
@@ -59,7 +68,7 @@ namespace gns::rendering
 
 	private:
 		Screen* m_screen;
-
+		LightingSettings_Internal m_lightingSettings;
 		GlobalUniformData globalUniform;
 
 		std::vector<ObjectDrawData> objects;
@@ -94,5 +103,6 @@ namespace gns::rendering
 		TextureHandle CreateTexture(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
 		TextureHandle CreateTexture(VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
 		VulkanTexture& GetTexture(TextureHandle handle);
+
 	};
 }

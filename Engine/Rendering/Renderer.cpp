@@ -1,4 +1,6 @@
 ﻿#include "gnspch.h"
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_LEFT_HANDED 
 #include "Renderer.h"
 
 #include <fstream>
@@ -34,7 +36,6 @@ gns::rendering::Renderer::Renderer(Screen* screen) : m_screen(screen)
 	m_device->m_gpuSceneDataBuffer = VulkanBuffer::Create(m_device->GetAllocator(), sizeof(GlobalUniformData),
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-    globalUniform.ambientColor = { 1,1,1,0.1f };
     globalUniform.exposure = 1.f;
     globalUniform.gamma = 1.f;
 
@@ -129,18 +130,32 @@ void gns::rendering::Renderer::InitImGui()
 
     _VK_CHECK(vkCreateDescriptorPool(m_device->GetDevice(), &pool_info, nullptr, &imguiPool), "");
 
-	Texture* texture = Object::Find<Texture>("offscreen_texture");
-    VulkanTexture& vkTexture = m_device->GetTexture(texture->handle);
-    DescriptorAllocator allocator;
-	DescriptorLayoutBuilder builder;
-    builder.AddBinding(0,  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    vkTexture.setLayout = builder.Build(m_device->GetDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
-    //vkTexture.image.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
-    vkTexture.descriptorSet = allocator.Allocate(m_device->GetDevice(), vkTexture.setLayout, imguiPool);
-
-    rendering::DescriptorWriter image_writer;
-    image_writer.WriteImage(0, vkTexture.image.imageView, vkTexture.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    image_writer.UpdateSet(m_device->GetDevice(), vkTexture.descriptorSet);
+    {
+		Texture* texture = Object::Find<Texture>("offscreen_texture");
+	    VulkanTexture& vkTexture = m_device->GetTexture(texture->handle);
+	    DescriptorAllocator allocator;
+		DescriptorLayoutBuilder builder;
+	    builder.AddBinding(0,  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	    vkTexture.setLayout = builder.Build(m_device->GetDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
+	    vkTexture.descriptorSet = allocator.Allocate(m_device->GetDevice(), vkTexture.setLayout, imguiPool);
+	    //vkTexture.image.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+	    rendering::DescriptorWriter image_writer;
+	    image_writer.WriteImage(0, vkTexture.image.imageView, vkTexture.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	    image_writer.UpdateSet(m_device->GetDevice(), vkTexture.descriptorSet);
+    }
+    {
+        Texture* texture = Object::Find<Texture>("shadow_map_debug");
+        VulkanTexture& vkTexture = m_device->GetTexture(texture->handle);
+        DescriptorAllocator allocator;
+        DescriptorLayoutBuilder builder;
+        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        vkTexture.setLayout = builder.Build(m_device->GetDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
+        vkTexture.descriptorSet = allocator.Allocate(m_device->GetDevice(), vkTexture.setLayout, imguiPool);
+        //vkTexture.image.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+        rendering::DescriptorWriter image_writer;
+        image_writer.WriteImage(0, vkTexture.image.imageView, vkTexture.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        image_writer.UpdateSet(m_device->GetDevice(), vkTexture.descriptorSet);
+    }
 
     // 2: initialize imgui library
     // this initializes the core structures of imgui
@@ -240,6 +255,7 @@ void gns::rendering::Renderer::BuildDrawData()
 	        index++;
         }
     }
+    m_device->UpdateStorageBuffer(objects.data(), objects.size() * sizeof(ObjectDrawData));
 
     {
 	    auto pointLight_view = SystemsManager::GetRegistry()
@@ -287,15 +303,39 @@ void gns::rendering::Renderer::BuildDrawData()
 	            sinf(transform.rotation.x),
 	            cosf(transform.rotation.x) * cosf(transform.rotation.y)
 	        };
-	        forward = glm::normalize(forward);
+            glm::vec3 sceneCenter = glm::vec3(0);
+	        forward = glm::normalize(sceneCenter - transform.position);
 
 	        dir_lights.emplace_back(
 	            forward.x, forward.y, forward.z,
 	            color.color.r, color.color.g, color.color.b, light.intensity);
+
+            const float halfExtent = m_lightingSettings.halfExtent;
+            const float nearPlane = m_lightingSettings.nearPlane;
+            const float farPlane = m_lightingSettings.farPlane;
+
+            glm::vec3 lightDir = glm::normalize(forward);
+            float distanceFromCenter = halfExtent;
+            glm::vec3 lightPos = -lightDir * distanceFromCenter;
+
+            glm::vec3 worldUp = { 0.0f, 1.0f, 0.0f };
+            glm::vec3 right = glm::normalize(glm::cross(forward, worldUp));
+            glm::vec3 up = glm::normalize(glm::cross(right, forward));
+
+            glm::mat4 lightView = glm::lookAt(lightPos, sceneCenter, worldUp);
+
+            // Symmetric ortho centered around sceneCenter
+            glm::mat4 lightProj = glm::ortho(
+                -halfExtent, halfExtent,   // left, right
+                -halfExtent, halfExtent,   // bottom, top
+                nearPlane, farPlane        // near, far
+            );
+
+            lightProj[1][1] *= -1.0f;
+            globalUniform.dirLightViewProj = lightProj * lightView;
 	    }
 	    m_device->UpdateDirLightBuffer(dir_lights.data(), dir_lights.size() * sizeof(DirectionalLight));
     }
-
     {
         auto spotLightWiev = SystemsManager::GetRegistry()
             .view<
@@ -330,7 +370,6 @@ void gns::rendering::Renderer::BuildDrawData()
         }
         m_device->UpdateSpotLightBuffer(spot_lights.data(), spot_lights.size() * sizeof(SpotLight));
     }
-    m_device->UpdateStorageBuffer(objects.data(), objects.size() * sizeof(ObjectDrawData));
 }
 
 void gns::rendering::Renderer::CreatePipelineForShader(Shader* shader)

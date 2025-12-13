@@ -126,7 +126,8 @@ namespace gns::rendering
 		VulkanBuffer m_gpuSceneDataBuffer;
 
 		Texture* offscreen_Texture;
-		rendering::Texture* m_shadowMap;
+		Texture* m_shadowMap;
+		Texture* m_ShadowTexture_debug;
 		const uint32_t m_shadowMapSize = 1024;
 
 		Resources resources;
@@ -194,7 +195,7 @@ namespace gns::rendering
 		void EndFrame(VkCommandBuffer& cmd, uint32_t& swapchainImageIndex);
 		void EndDraw();
 		void DrawBackground(VkCommandBuffer cmd);
-		void SetDrawStructs(VkCommandBuffer cmd);
+		void SetDrawStructs(VkCommandBuffer cmd, uint32_t width, uint32_t height);
 		void UpdatePerFrameDescriptors(VkDescriptorSet& perFrameSet);
 		void UpdateMaterialData(VkDescriptorSet& imageSet, Material& material);
 
