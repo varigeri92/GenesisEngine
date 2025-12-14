@@ -224,7 +224,6 @@ namespace gns::rendering::utils
 		if (clear) {
 			colorAttachment.clearValue = *clear;
 		}
-
 		return colorAttachment;
 	}
 
@@ -280,7 +279,7 @@ namespace gns::rendering::utils
 		info.addressModeU = samplerAddressMode;
 		info.addressModeV = samplerAddressMode;
 		info.addressModeW = samplerAddressMode;
-
+		info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 		return info;
 	}
 

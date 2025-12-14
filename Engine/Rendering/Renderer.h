@@ -38,20 +38,28 @@ namespace gns::rendering
 		uint32_t pointLight_count;
 		uint32_t spotLight_count;
 		uint32_t dirLight_count;
+		uint32_t shadowMapSize { 1024 };
+		uint32_t pcf_kernelSize { 3 };
 		float exposure;
 		float gamma;
+		float normalOffset;
+		float shadowBias;
+		float slopeScale;
+		float halfExtent{ 10.f };
+		float nearPlane{ 1.f };
+
 	};
 
 	struct LightingSettings_Internal
 	{
 		uint32_t shadowMapSize{ 1024 };
 		uint32_t pcf_kernelSize{ 3 };
-		float normalOffset{ 0.001f };
-		float shadowBias{ 0.001f };
-		float slopeScale{ 0.001f };
-		float halfExtent{ 10.f };
+		float normalOffset{ 0.00100 };
+		float shadowBias{ 0.30000 };
+		float slopeScale{ 0.00100 };
+		float halfExtent{ 10.00000f };
 		float nearPlane{ 1.f };
-		float farPlane{ 1.f };
+		float farPlane{ 1000.f };
 	};
 
 	class Renderer
@@ -88,6 +96,8 @@ namespace gns::rendering
 		Shader* CreateShader(const std::string& name, const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
 		Shader* ReCreateShader(const guid guid);
 		void WaitForGPUIddle();
+		void BuildDirLightFrustum(glm::mat4 inverse_viewProj, glm::vec3 fwd);
+		void BuildDirLightFrustumBasic(glm::vec3 fwd, glm::vec3 scene_center);
 
 	public:
 		void Draw();

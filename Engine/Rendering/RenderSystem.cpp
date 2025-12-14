@@ -247,12 +247,19 @@ void gns::RenderSystem::UpdateCamera()
     m_renderer->globalUniform.viewProj = m_camera->m_cameraMatrix;
     m_renderer->globalUniform.camPosition = { m_cameraTransform->position.x, m_cameraTransform->position.y,m_cameraTransform->position.z, 1 };
 
+	m_renderer->globalUniform.shadowMapSize = m_lightingSettings.shadowMapSize;
+    m_renderer->globalUniform.halfExtent = m_lightingSettings.halfExtent;
+    m_renderer->globalUniform.pcf_kernelSize = m_lightingSettings.pcf_kernelSize;
+    m_renderer->globalUniform.normalOffset = m_lightingSettings.normalOffset;
+    m_renderer->globalUniform.shadowBias = m_lightingSettings.shadowBias;
+    m_renderer->globalUniform.slopeScale = m_lightingSettings.slopeScale;
+
     m_renderer->m_lightingSettings.normalOffset = m_lightingSettings.normalOffset;
     m_renderer->m_lightingSettings.shadowBias = m_lightingSettings.shadowBias;
     m_renderer->m_lightingSettings.slopeScale = m_lightingSettings.slopeScale;
     m_renderer->m_lightingSettings.halfExtent = m_lightingSettings.halfExtent;
     m_renderer->m_lightingSettings.nearPlane = m_lightingSettings.nearPlane;
-    m_renderer->m_lightingSettings.farPlane = m_lightingSettings.farPlane;
+
 }
 
 

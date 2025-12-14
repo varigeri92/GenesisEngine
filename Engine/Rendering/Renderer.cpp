@@ -303,36 +303,16 @@ void gns::rendering::Renderer::BuildDrawData()
 	            sinf(transform.rotation.x),
 	            cosf(transform.rotation.x) * cosf(transform.rotation.y)
 	        };
-            glm::vec3 sceneCenter = glm::vec3(0);
-	        forward = glm::normalize(sceneCenter - transform.position);
-
+	        
 	        dir_lights.emplace_back(
 	            forward.x, forward.y, forward.z,
 	            color.color.r, color.color.g, color.color.b, light.intensity);
-
-            const float halfExtent = m_lightingSettings.halfExtent;
-            const float nearPlane = m_lightingSettings.nearPlane;
-            const float farPlane = m_lightingSettings.farPlane;
-
-            glm::vec3 lightDir = glm::normalize(forward);
-            float distanceFromCenter = halfExtent;
-            glm::vec3 lightPos = -lightDir * distanceFromCenter;
-
-            glm::vec3 worldUp = { 0.0f, 1.0f, 0.0f };
-            glm::vec3 right = glm::normalize(glm::cross(forward, worldUp));
-            glm::vec3 up = glm::normalize(glm::cross(right, forward));
-
-            glm::mat4 lightView = glm::lookAt(lightPos, sceneCenter, worldUp);
-
-            // Symmetric ortho centered around sceneCenter
-            glm::mat4 lightProj = glm::ortho(
-                -halfExtent, halfExtent,   // left, right
-                -halfExtent, halfExtent,   // bottom, top
-                nearPlane, farPlane        // near, far
-            );
-
-            lightProj[1][1] *= -1.0f;
-            globalUniform.dirLightViewProj = lightProj * lightView;
+            
+            BuildDirLightFrustumBasic(forward, globalUniform.camPosition);
+            /*
+            glm::mat4 inverseCamera = glm::inverse(globalUniform.viewProj);
+            BuildDirLightFrustum(inverseCamera, forward);
+             */
 	    }
 	    m_device->UpdateDirLightBuffer(dir_lights.data(), dir_lights.size() * sizeof(DirectionalLight));
     }
@@ -491,6 +471,114 @@ void gns::rendering::Renderer::UpdateTextureDescriptorSet(Texture* texture)
 void gns::rendering::Renderer::WaitForGPUIddle()
 {
 	vkDeviceWaitIdle(m_device->GetDevice());
+}
+
+void gns::rendering::Renderer::BuildDirLightFrustum(glm::mat4 inverse_viewProj, glm::vec3 fwd)
+{
+    const glm::vec3 ndcCorners[8] = {
+		{ -1.f, -1.f, 0.f }, // near
+		{  1.f, -1.f, 0.f },
+		{  1.f,  1.f, 0.f },
+		{ -1.f,  1.f, 0.f },
+		{ -1.f, -1.f, 1.f }, // far
+		{  1.f, -1.f, 1.f },
+		{  1.f,  1.f, 1.f },
+		{ -1.f,  1.f, 1.f },
+    };
+
+    glm::vec3 frustumCornersWS[8];
+    for (int i = 0; i < 8; ++i)
+    {
+        glm::vec4 ndc = glm::vec4(ndcCorners[i], 1.0f);
+        glm::vec4 world = inverse_viewProj * ndc;
+        world /= world.w;
+        frustumCornersWS[i] = glm::vec3(world);
+    }
+
+
+    glm::vec3 lightDir = fwd;
+
+    glm::vec3 center(0.0f);
+    for (glm::vec3 c : frustumCornersWS)
+        center += c;
+    center /= 8.0f;
+
+    // Position the light "backwards" along its direction
+    float dist = 50.0f; // tweak
+    glm::vec3 lightPos = center - lightDir * dist;
+
+    // Pick safe up
+    glm::vec3 up(0.0f, 1.0f, 0.0f);
+    if (std::abs(glm::dot(up, lightDir)) > 0.99f)
+        up = glm::vec3(0.0f, 0.0f, 1.0f);
+
+    glm::mat4 lightView = glm::lookAt(lightPos, center, up);
+
+    glm::vec3 frustumLS[8];
+    for (int i = 0; i < 8; ++i)
+    {
+        glm::vec4 ls = lightView * glm::vec4(frustumCornersWS[i], 1.0f);
+        frustumLS[i] = glm::vec3(ls);
+    }
+
+
+    glm::vec3 minLS(std::numeric_limits<float>::max());
+    glm::vec3 maxLS(-std::numeric_limits<float>::max());
+
+    for (int i = 0; i < 8; ++i)
+    {
+        minLS = glm::min(minLS, frustumLS[i]);
+        maxLS = glm::max(maxLS, frustumLS[i]);
+    }
+
+
+    // optional: add a small padding to avoid clipping at edges
+    float padding = 1.0f;
+    minLS.x -= padding;
+    maxLS.x += padding;
+    minLS.y -= padding;
+    maxLS.y += padding;
+
+    // For z we usually keep extra range
+    float nearPlane = -maxLS.z; // remember: in light space, view looks along -Z
+    float farPlane = -minLS.z;
+
+    glm::mat4 lightProj = glm::ortho(
+        minLS.x, maxLS.x,
+        minLS.y, maxLS.y,
+        nearPlane, farPlane
+    );
+
+    // Vulkan Y-flip if you do the same for camera projections:
+    lightProj[1][1] *= -1.0f;
+
+    globalUniform.dirLightViewProj = lightProj * lightView;
+}
+
+void gns::rendering::Renderer::BuildDirLightFrustumBasic(glm::vec3 fwd, glm::vec3 scene_center)
+{
+    const float halfExtent = m_lightingSettings.halfExtent;
+    const float nearPlane = m_lightingSettings.nearPlane;
+    const float farPlane = - m_lightingSettings.nearPlane;
+    
+    glm::vec3 lightDir = glm::normalize(fwd);
+    glm::vec3 worldUp = { 0.0f, 1.0f, 0.0f };
+    glm::vec3 lightPos = scene_center - (fwd);
+
+    glm::vec3 right = glm::normalize(glm::cross(fwd, worldUp));
+    glm::vec3 up = glm::normalize(glm::cross(right, fwd));
+
+    glm::mat4 lightView = glm::lookAt(lightPos, scene_center + fwd, worldUp);
+
+    glm::mat4 lightProj = glm::ortho(
+        -halfExtent, halfExtent,   // left, right
+        -halfExtent, halfExtent,   // bottom, top
+        nearPlane, farPlane        // near, far
+    );
+
+    lightProj[1][1] *= -1.0f;
+    globalUniform.dirLightViewProj = lightProj * lightView;
+
 }
 
 gns::rendering::VulkanBuffer gns::rendering::Renderer::CreateUniformBuffer(uint32_t size)

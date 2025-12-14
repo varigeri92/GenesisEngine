@@ -111,6 +111,14 @@ layout(set = 1, binding = 0) uniform  SceneData{
     uint pointLight_count;
     uint spotLight_count;
     uint dirLight_count;
+    uint shadowMapSize;
+    uint pcf_kernelSize;
     float exposure;
     float gamma;
+    float normalOffset;
+    float shadowBias;
+    float slopeScale;
+    float halfExtent;
+    float nearPlane;
+    float farPlane;
 } sceneData;

@@ -92,13 +92,19 @@ vec3 EvaluateBRDF(vec3 N, vec3 V, vec3 L,
     // BRDF * NdotL (without light radiance)
     return (kD * albedo / PI + spec) * NdotL;
 }
+float edgeFade(vec2 uv)
+{
+    float d = min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y));
+    float fadeStart = 0.1;
+    return clamp(d / fadeStart, 0.0, 1.0);
+}
 
 float ComputeShadowFactor(vec3 worldPos, vec3 N, vec3 L)
 {
     vec4 lightClip = sceneData.dirLightViewProj * vec4(worldPos, 1.0);
     vec3 ndc = lightClip.xyz / lightClip.w;
 
-    // outside clip, treat as lit
+    // stay safe: treat outside clip as lit
     if (ndc.z > 1.0 || ndc.z < 0.0)
         return 1.0;
 
@@ -108,39 +114,40 @@ float ComputeShadowFactor(vec3 worldPos, vec3 N, vec3 L)
 
     float currentDepth = ndc.z;
 
-    // -------- slope-scaled bias --------
-    float cosTheta   = max(dot(N, L), 0.0);
+    // -------- slope-scaled bias (light-angle only) --------
+    float cosTheta = max(dot(N, L), 0.0);
 
-    // tweak these two:
-    float minBias    = 0.0003;   // base bias
-    float slopeScale = 0.0020;   // extra bias at grazing angles
+    // derive bias from worldPerTexel, but use saner multipliers
+    float worldPerTexel = (2.0 * sceneData.halfExtent) / float(sceneData.shadowMapSize);
 
-    float bias = max(minBias, slopeScale * (1.0 - cosTheta));
-    // -----------------------------------
+    float minBias    = worldPerTexel * sceneData.shadowBias;   // e.g. shadowBias = 0.05
+    float slopeBias  = worldPerTexel * sceneData.slopeScale * (1.0 - cosTheta); // e.g. slopeScale = 2.0
 
-    // -------- PCF filtering (3x3 kernel) --------
+    float bias = minBias + slopeBias;
+    // ------------------------------------------------------
+
     vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0));
-
     float visibility = 0.0;
-    const int kernel = 1; // 1 = 3x3, 2 = 5x5, etc.
+    int kernel = 1;  // 1 = 3x3, 2 = 5x5, etc.
 
     for (int x = -kernel; x <= kernel; ++x)
     {
         for (int y = -kernel; y <= kernel; ++y)
         {
             vec2 sampleUV = uv + vec2(x, y) * texelSize;
+            sampleUV = clamp(sampleUV, vec2(0.0), vec2(1.0));
 
-            // optional: clamp, or just rely on the early-out above
-            // sampleUV = clamp(sampleUV, vec2(0.0), vec2(1.0));
-
-            float shadowDepth = texture(shadowMap, sampleUV).g;
+            float shadowDepth = texture(shadowMap, sampleUV).r;
             visibility += (currentDepth - bias > shadowDepth) ? 0.0 : 1.0;
         }
     }
 
     visibility /= float((kernel * 2 + 1) * (kernel * 2 + 1));
+    float fade = edgeFade(uv);
+    visibility = mix(1.0, visibility, fade);
     return visibility;
 }
+
 
 vec3 AccumulateDirectionalLights(vec3 N, vec3 V,
                                  vec3 albedo, float metallic, float roughness, vec3 F0,

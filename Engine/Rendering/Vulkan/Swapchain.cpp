@@ -62,7 +62,7 @@ void gns::rendering::Swapchain::Create(Screen* screen)
     screen->aspectRatio = (float)m_extent.width / (float)m_extent.height;
     screen->updateRenderTargetTarget = true;
     //hardcoding the draw format to 32 bit float
-    m_renderTarget.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    m_renderTarget.imageFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
     m_renderTarget.imageExtent = drawImageExtent;
 
     VkImageUsageFlags drawImageUsages{};

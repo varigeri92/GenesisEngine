@@ -128,7 +128,7 @@ namespace gns::rendering
 		Texture* offscreen_Texture;
 		Texture* m_shadowMap;
 		Texture* m_ShadowTexture_debug;
-		const uint32_t m_shadowMapSize = 1024;
+		const uint32_t m_shadowMapSize = 4096;
 
 		Resources resources;
 		// ------------------

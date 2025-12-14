@@ -23,14 +23,13 @@ namespace gns
 
 		struct LightingSettings
 		{
-			uint32_t shadowMapSize	{ 1024 };
-			uint32_t pcf_kernelSize { 3 };
-			float normalOffset		{ 0.001f };
-			float shadowBias		{ 0.001f };
-			float slopeScale		{ 0.001f };
-			float halfExtent		{ 10.f };
-			float nearPlane			{ 1.f };
-			float farPlane			{ 200.f };
+			uint32_t shadowMapSize{ 1024 };
+			uint32_t pcf_kernelSize{ 1 };
+			float normalOffset{ 0.0001f };
+			float shadowBias{ 0.01135 };
+			float slopeScale{ 0.5f };
+			float halfExtent{ 25.00000f };
+			float nearPlane{ -25.00000 };
 		};
 	}
 

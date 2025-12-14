@@ -51,7 +51,7 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
     m_swapchain = { m_device, m_physicalDevice, m_surface, m_allocator };
     CreateSwapchain();
     offscreen_Texture = Object::Create<Texture>("offscreen_texture");
-    auto[handle, textureData] = CreateTexture(m_swapchain.GetRenderTargetImage().imageExtent, VK_FORMAT_R8G8B8A8_UNORM,
+    auto[handle, textureData] = CreateTexture(m_swapchain.GetRenderTargetImage().imageExtent, VK_FORMAT_R32G32B32A32_SFLOAT,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
     offscreen_Texture->handle = handle;
 
@@ -70,13 +70,13 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
     m_ShadowTexture_debug->width = m_shadowMapSize;
     m_ShadowTexture_debug->height = m_shadowMapSize;
     auto [smd_handle, smd_textureData] = CreateTexture({ m_shadowMapSize, m_shadowMapSize, 1 },
-        VK_FORMAT_R16G16B16A16_SFLOAT,
+        VK_FORMAT_R32G32B32A32_SFLOAT,
         VK_IMAGE_USAGE_SAMPLED_BIT |
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
         VK_IMAGE_USAGE_TRANSFER_DST_BIT);
     m_ShadowTexture_debug->handle = smd_handle;
-
+    smd_textureData.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
     InitCommands();
     InitSyncStructures();
     InitDescriptors();
@@ -645,7 +645,7 @@ void gns::rendering::Device::DrawShadowMap(VkCommandBuffer cmd,
     VulkanTexture& shadow_colorImage = GetTexture(m_ShadowTexture_debug->handle);
     VulkanTexture& shadow_depthImage = GetTexture(m_shadowMap->handle);
 
-    VkClearValue clearColor = {0,0,0,1};
+    VkClearValue clearColor = {1,1,1,1};
     VkRenderingAttachmentInfo sm_colorAttachment =
         utils::AttachmentInfo(shadow_colorImage.image.imageView, &clearColor, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     VkRenderingAttachmentInfo sm_depthAttachment =

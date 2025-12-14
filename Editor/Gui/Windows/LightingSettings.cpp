@@ -12,14 +12,14 @@ namespace gns::editor
 		| ImGuiTableFlags_NoPadInnerX | ImGuiTableFlags_NoPadOuterX;
 
 
-	void DrawFloatField(const std::string& label, float* value, float steps)
+	void DrawFloatField(const std::string& label, float* value, float steps, float v_min = -FLT_MAX, float v_max = FLT_MAX, const char* display = "%.5f")
 	{
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		ImGui::Text(label.c_str());
 		ImGui::TableNextColumn();
 		ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-		ImGui::DragFloat(("##" + label).c_str(), value, steps);
+		ImGui::DragFloat(("##" + label).c_str(), value, steps, v_min, v_max, display);
 		ImGui::PopItemWidth();
 	}
 
@@ -48,12 +48,11 @@ namespace gns::editor
 		{
 			ImGui::TableSetupColumn("##", ImGuiTableColumnFlags_WidthFixed, label_width);
 			ImGui::TableSetupColumn("##", ImGuiTableColumnFlags_WidthFixed, available_Width - label_width);
-			DrawFloatField("Normal Offset", &m_renderSystem->GetLightningSettings()->normalOffset, 0.0001f);
-			DrawFloatField("Shadow Bias", &m_renderSystem->GetLightningSettings()->shadowBias, 0.0001f);
-			DrawFloatField("Slope Scale", &m_renderSystem->GetLightningSettings()->slopeScale, 0.0001f);
+			DrawFloatField("Normal Offset", &m_renderSystem->GetLightningSettings()->normalOffset, 0.00001f);
+			DrawFloatField("Shadow Bias", &m_renderSystem->GetLightningSettings()->shadowBias, 0.00001f);
+			DrawFloatField("Slope Scale", &m_renderSystem->GetLightningSettings()->slopeScale, 0.00001f);
 			DrawFloatField("Half Extent", &m_renderSystem->GetLightningSettings()->halfExtent, 0.1f);
 			DrawFloatField("Near Plane", &m_renderSystem->GetLightningSettings()->nearPlane, 1.f);
-			DrawFloatField("Far Plane", &m_renderSystem->GetLightningSettings()->farPlane, 1.f);
 			ImGui::EndTable();
 		}
 	}
