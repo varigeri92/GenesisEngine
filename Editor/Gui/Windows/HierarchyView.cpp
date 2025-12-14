@@ -146,7 +146,8 @@ void gns::editor::gui::HierarchyView::DrawHierarchyContextMenu()
 
 				if (ImGui::MenuItem("Directional Light"))
 				{
-					LOG_INFO("Create New Entity");
+					entity::EditorEntityManager manager;
+					manager.CreateNewEntity(entity::PreconfiguredEntityType::DirectionalLight);
 				}
 
 				if (ImGui::MenuItem("Point Light"))
@@ -157,7 +158,8 @@ void gns::editor::gui::HierarchyView::DrawHierarchyContextMenu()
 
 				if (ImGui::MenuItem("Spot Light"))
 				{
-					LOG_INFO("Create New Entity");
+					entity::EditorEntityManager manager;
+					manager.CreateNewEntity(entity::PreconfiguredEntityType::SpotLight);
 				}
 
 				if (ImGui::BeginMenu("Advanced Lighting"))

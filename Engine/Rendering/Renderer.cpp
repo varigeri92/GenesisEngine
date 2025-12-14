@@ -1,4 +1,6 @@
 ﻿#include "gnspch.h"
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_LEFT_HANDED 
 #include "Renderer.h"
 
 #include <fstream>
@@ -34,7 +36,6 @@ gns::rendering::Renderer::Renderer(Screen* screen) : m_screen(screen)
 	m_device->m_gpuSceneDataBuffer = VulkanBuffer::Create(m_device->GetAllocator(), sizeof(GlobalUniformData),
         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-    globalUniform.ambientColor = { 1,1,1,0.1f };
     globalUniform.exposure = 1.f;
     globalUniform.gamma = 1.f;
 
@@ -129,18 +130,32 @@ void gns::rendering::Renderer::InitImGui()
 
     _VK_CHECK(vkCreateDescriptorPool(m_device->GetDevice(), &pool_info, nullptr, &imguiPool), "");
 
-	Texture* texture = Object::Find<Texture>("offscreen_texture");
-    VulkanTexture& vkTexture = m_device->GetTexture(texture->handle);
-    DescriptorAllocator allocator;
-	DescriptorLayoutBuilder builder;
-    builder.AddBinding(0,  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    vkTexture.setLayout = builder.Build(m_device->GetDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
-    //vkTexture.image.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
-    vkTexture.descriptorSet = allocator.Allocate(m_device->GetDevice(), vkTexture.setLayout, imguiPool);
-
-    rendering::DescriptorWriter image_writer;
-    image_writer.WriteImage(0, vkTexture.image.imageView, vkTexture.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    image_writer.UpdateSet(m_device->GetDevice(), vkTexture.descriptorSet);
+    {
+		Texture* texture = Object::Find<Texture>("offscreen_texture");
+	    VulkanTexture& vkTexture = m_device->GetTexture(texture->handle);
+	    DescriptorAllocator allocator;
+		DescriptorLayoutBuilder builder;
+	    builder.AddBinding(0,  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	    vkTexture.setLayout = builder.Build(m_device->GetDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
+	    vkTexture.descriptorSet = allocator.Allocate(m_device->GetDevice(), vkTexture.setLayout, imguiPool);
+	    //vkTexture.image.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+	    rendering::DescriptorWriter image_writer;
+	    image_writer.WriteImage(0, vkTexture.image.imageView, vkTexture.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+	    image_writer.UpdateSet(m_device->GetDevice(), vkTexture.descriptorSet);
+    }
+    {
+        Texture* texture = Object::Find<Texture>("shadow_map_debug");
+        VulkanTexture& vkTexture = m_device->GetTexture(texture->handle);
+        DescriptorAllocator allocator;
+        DescriptorLayoutBuilder builder;
+        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        vkTexture.setLayout = builder.Build(m_device->GetDevice(), VK_SHADER_STAGE_FRAGMENT_BIT);
+        vkTexture.descriptorSet = allocator.Allocate(m_device->GetDevice(), vkTexture.setLayout, imguiPool);
+        //vkTexture.image.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+        rendering::DescriptorWriter image_writer;
+        image_writer.WriteImage(0, vkTexture.image.imageView, vkTexture.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        image_writer.UpdateSet(m_device->GetDevice(), vkTexture.descriptorSet);
+    }
 
     // 2: initialize imgui library
     // this initializes the core structures of imgui
@@ -240,30 +255,101 @@ void gns::rendering::Renderer::BuildDrawData()
 	        index++;
         }
     }
-
-    auto pointLight_view = SystemsManager::GetRegistry()
-	.view<gns::entity::EntityComponent,
-		gns::entity::Transform,
-		gns::rendering::PointLightComponent,
-		gns::rendering::ColorComponent>();
-
-	std::vector<PointLight> point_lights = {};
-    point_lights.reserve(pointLight_view.size_hint());
-    for (auto [entt, entity, transform, pointLight, color] : pointLight_view.each())
-    {
-        if (!entity.active)
-            continue;
-        point_lights.emplace_back(
-			transform.position.x, transform.position.y, transform.position.z, pointLight.radius, 
-            color.color.r, color.color.g, color.color.b, pointLight.intensity);
-    }
-    globalUniform.pointLight_count = point_lights.size();
-    globalUniform.spotLight_count = 0;
-    globalUniform.dirLight_count = 0;
-
     m_device->UpdateStorageBuffer(objects.data(), objects.size() * sizeof(ObjectDrawData));
-    m_device->UpdatePointLightBuffer(point_lights.data(), point_lights.size() * sizeof(PointLight));
-    //m_device->UpdateSpotLightBuffer(nullptr, 0);
+
+    {
+	    auto pointLight_view = SystemsManager::GetRegistry()
+		.view<gns::entity::EntityComponent,
+			gns::entity::Transform,
+			gns::rendering::LightComponent,
+			gns::rendering::PointLightComponent,
+			gns::rendering::ColorComponent>();
+
+		std::vector<PointLight> point_lights = {};
+        globalUniform.pointLight_count = 0;
+	    point_lights.reserve(pointLight_view.size_hint());
+	    for (auto [entt, entity, transform, light, pointLight, color] : pointLight_view.each())
+	    {
+	        if (!entity.active)
+	            continue;
+		    globalUniform.pointLight_count++;
+	        point_lights.emplace_back(
+				transform.position.x, transform.position.y, transform.position.z, pointLight.radius, 
+	            color.color.r, color.color.g, color.color.b, light.intensity);
+	    }
+		m_device->UpdatePointLightBuffer(point_lights.data(), point_lights.size() * sizeof(PointLight));
+	}
+    {
+	    auto dirLightWiev = SystemsManager::GetRegistry()
+	        .view<
+	        gns::entity::EntityComponent,
+	        gns::entity::Transform,
+	        gns::rendering::LightComponent,
+	        gns::rendering::ColorComponent>(entt::exclude<
+                gns::rendering::PointLightComponent, 
+                gns::rendering::SpotLightComponent>);
+
+	    std::vector<DirectionalLight> dir_lights = {};
+	    dir_lights.reserve(dirLightWiev.size_hint());
+	    globalUniform.dirLight_count = 0;
+	    for (auto [entity_handle, entity, transform, light, color] : dirLightWiev.each())
+	    {
+	        if (!entity.active)
+	            continue;
+
+            globalUniform.dirLight_count++;
+	        glm::vec3 forward = {
+	            cosf(transform.rotation.x) * sinf(transform.rotation.y),
+	            sinf(transform.rotation.x),
+	            cosf(transform.rotation.x) * cosf(transform.rotation.y)
+	        };
+	        
+	        dir_lights.emplace_back(
+	            forward.x, forward.y, forward.z,
+	            color.color.r, color.color.g, color.color.b, light.intensity);
+            
+            BuildDirLightFrustumBasic(forward, globalUniform.camPosition);
+            /*
+            glm::mat4 inverseCamera = glm::inverse(globalUniform.viewProj);
+            BuildDirLightFrustum(inverseCamera, forward);
+             */
+	    }
+	    m_device->UpdateDirLightBuffer(dir_lights.data(), dir_lights.size() * sizeof(DirectionalLight));
+    }
+    {
+        auto spotLightWiev = SystemsManager::GetRegistry()
+            .view<
+            gns::entity::EntityComponent,
+            gns::entity::Transform,
+            gns::rendering::LightComponent,
+			gns::rendering::SpotLightComponent,
+            gns::rendering::ColorComponent>();
+
+        std::vector<SpotLight> spot_lights = {};
+        spot_lights.reserve(spotLightWiev.size_hint());
+        globalUniform.spotLight_count = 0;
+        for (auto [entity_handle, entity, transform, light, spotLight, color] : spotLightWiev.each())
+        {
+            if (!entity.active)
+                continue;
+
+            globalUniform.spotLight_count++;
+            glm::vec3 forward = {
+                cosf(transform.rotation.x) * sinf(transform.rotation.y),
+                sinf(transform.rotation.x),
+                cosf(transform.rotation.x) * cosf(transform.rotation.y)
+            };
+            forward = glm::normalize(forward);
+
+            spot_lights.emplace_back(
+                transform.position.x, transform.position.y, transform.position.z,
+                spotLight.distance, spotLight.angle, 
+                light.intensity,
+                color.color.r, color.color.g, color.color.b,
+                forward.x, forward.y, forward.z);
+        }
+        m_device->UpdateSpotLightBuffer(spot_lights.data(), spot_lights.size() * sizeof(SpotLight));
+    }
 }
 
 void gns::rendering::Renderer::CreatePipelineForShader(Shader* shader)
@@ -280,7 +366,7 @@ void gns::rendering::Renderer::CreatePipelineForShader(Shader* shader)
 
 
 
-gns::rendering::Shader* gns::rendering::Renderer::CreateShader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath)
+gns::rendering::Shader* gns::rendering::Renderer::CreateShader(const std::string& name, const std::string& vertexShaderPath, const std::string& fragmentShaderPath)
 {
     LOG_INFO(vertexShaderPath + fragmentShaderPath);
     size_t shader_guid = hashString(vertexShaderPath+fragmentShaderPath);
@@ -288,7 +374,7 @@ gns::rendering::Shader* gns::rendering::Renderer::CreateShader(const std::string
         return Object::Get<Shader>(shader_guid);
     
     
-    Shader* shader = Object::CreateWithGuid<rendering::Shader>(shader_guid, vertexShaderPath, fragmentShaderPath, "default_shader");
+    Shader* shader = Object::CreateWithGuid<rendering::Shader>(shader_guid, vertexShaderPath, fragmentShaderPath, name);
     CreatePipelineForShader(shader);
 	m_shaderCache.push_back(shader_guid);
 	return shader;
@@ -312,7 +398,6 @@ void gns::rendering::Renderer::Draw()
         m_device->m_screen->resized = false;
         Texture* texture = Object::Find<Texture>("offscreen_texture");
         VulkanTexture& vkTexture = m_device->GetTexture(texture->handle);
-
 
         vkTexture.Destroy();
         vkTexture.image = VulkanImage::Create(*m_device, { m_device->m_screen->width, m_device->m_screen->height, 1}
@@ -386,6 +471,114 @@ void gns::rendering::Renderer::UpdateTextureDescriptorSet(Texture* texture)
 void gns::rendering::Renderer::WaitForGPUIddle()
 {
 	vkDeviceWaitIdle(m_device->GetDevice());
+}
+
+void gns::rendering::Renderer::BuildDirLightFrustum(glm::mat4 inverse_viewProj, glm::vec3 fwd)
+{
+    const glm::vec3 ndcCorners[8] = {
+		{ -1.f, -1.f, 0.f }, // near
+		{  1.f, -1.f, 0.f },
+		{  1.f,  1.f, 0.f },
+		{ -1.f,  1.f, 0.f },
+		{ -1.f, -1.f, 1.f }, // far
+		{  1.f, -1.f, 1.f },
+		{  1.f,  1.f, 1.f },
+		{ -1.f,  1.f, 1.f },
+    };
+
+    glm::vec3 frustumCornersWS[8];
+    for (int i = 0; i < 8; ++i)
+    {
+        glm::vec4 ndc = glm::vec4(ndcCorners[i], 1.0f);
+        glm::vec4 world = inverse_viewProj * ndc;
+        world /= world.w;
+        frustumCornersWS[i] = glm::vec3(world);
+    }
+
+
+    glm::vec3 lightDir = fwd;
+
+    glm::vec3 center(0.0f);
+    for (glm::vec3 c : frustumCornersWS)
+        center += c;
+    center /= 8.0f;
+
+    // Position the light "backwards" along its direction
+    float dist = 50.0f; // tweak
+    glm::vec3 lightPos = center - lightDir * dist;
+
+    // Pick safe up
+    glm::vec3 up(0.0f, 1.0f, 0.0f);
+    if (std::abs(glm::dot(up, lightDir)) > 0.99f)
+        up = glm::vec3(0.0f, 0.0f, 1.0f);
+
+    glm::mat4 lightView = glm::lookAt(lightPos, center, up);
+
+    glm::vec3 frustumLS[8];
+    for (int i = 0; i < 8; ++i)
+    {
+        glm::vec4 ls = lightView * glm::vec4(frustumCornersWS[i], 1.0f);
+        frustumLS[i] = glm::vec3(ls);
+    }
+
+
+    glm::vec3 minLS(std::numeric_limits<float>::max());
+    glm::vec3 maxLS(-std::numeric_limits<float>::max());
+
+    for (int i = 0; i < 8; ++i)
+    {
+        minLS = glm::min(minLS, frustumLS[i]);
+        maxLS = glm::max(maxLS, frustumLS[i]);
+    }
+
+
+    // optional: add a small padding to avoid clipping at edges
+    float padding = 1.0f;
+    minLS.x -= padding;
+    maxLS.x += padding;
+    minLS.y -= padding;
+    maxLS.y += padding;
+
+    // For z we usually keep extra range
+    float nearPlane = -maxLS.z; // remember: in light space, view looks along -Z
+    float farPlane = -minLS.z;
+
+    glm::mat4 lightProj = glm::ortho(
+        minLS.x, maxLS.x,
+        minLS.y, maxLS.y,
+        nearPlane, farPlane
+    );
+
+    // Vulkan Y-flip if you do the same for camera projections:
+    lightProj[1][1] *= -1.0f;
+
+    globalUniform.dirLightViewProj = lightProj * lightView;
+}
+
+void gns::rendering::Renderer::BuildDirLightFrustumBasic(glm::vec3 fwd, glm::vec3 scene_center)
+{
+    const float halfExtent = m_lightingSettings.halfExtent;
+    const float nearPlane = m_lightingSettings.nearPlane;
+    const float farPlane = - m_lightingSettings.nearPlane;
+    
+    glm::vec3 lightDir = glm::normalize(fwd);
+    glm::vec3 worldUp = { 0.0f, 1.0f, 0.0f };
+    glm::vec3 lightPos = scene_center - (fwd);
+
+    glm::vec3 right = glm::normalize(glm::cross(fwd, worldUp));
+    glm::vec3 up = glm::normalize(glm::cross(right, fwd));
+
+    glm::mat4 lightView = glm::lookAt(lightPos, scene_center + fwd, worldUp);
+
+    glm::mat4 lightProj = glm::ortho(
+        -halfExtent, halfExtent,   // left, right
+        -halfExtent, halfExtent,   // bottom, top
+        nearPlane, farPlane        // near, far
+    );
+
+    lightProj[1][1] *= -1.0f;
+    globalUniform.dirLightViewProj = lightProj * lightView;
+
 }
 
 gns::rendering::VulkanBuffer gns::rendering::Renderer::CreateUniformBuffer(uint32_t size)

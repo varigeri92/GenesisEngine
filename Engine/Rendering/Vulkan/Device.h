@@ -122,9 +122,14 @@ namespace gns::rendering
 		VulkanBuffer m_objectStorageBuffer;
 		VulkanBuffer m_pointLightStorageBuffer;
 		VulkanBuffer m_spotLightStorageBuffer;
+		VulkanBuffer m_dirLightStorageBuffer;
 		VulkanBuffer m_gpuSceneDataBuffer;
 
 		Texture* offscreen_Texture;
+		Texture* m_shadowMap;
+		Texture* m_ShadowTexture_debug;
+		const uint32_t m_shadowMapSize = 2048;
+
 		Resources resources;
 		// ------------------
 
@@ -161,6 +166,7 @@ namespace gns::rendering
 		static ImmeduateSubmitStruct sImmediateSubmitStruct;
 		Shader* m_currentBoundShader = nullptr;
 		Material* m_currentMaterial = nullptr;
+		Shader* m_shadowShader = nullptr;
 
 		size_t m_currentBoundShader_guid = 0;
 		size_t m_currentBoundMaterial_guid = 0;
@@ -189,9 +195,14 @@ namespace gns::rendering
 		void EndFrame(VkCommandBuffer& cmd, uint32_t& swapchainImageIndex);
 		void EndDraw();
 		void DrawBackground(VkCommandBuffer cmd);
-		void SetDrawStructs(VkCommandBuffer cmd);
+		void SetDrawStructs(VkCommandBuffer cmd, uint32_t width, uint32_t height);
 		void UpdatePerFrameDescriptors(VkDescriptorSet& perFrameSet);
 		void UpdateMaterialData(VkDescriptorSet& imageSet, Material& material);
+
+		void DrawShadowMap(VkCommandBuffer cmd, 
+			std::vector<ObjectDrawData>& objects,
+			std::vector<size_t>& indices,
+			std::vector<rendering::Mesh*>& meshes);
 
 		void DrawGeometry(VkCommandBuffer cmd, std::vector<ObjectDrawData>& objects, 
 			std::vector<size_t>& indices, 
@@ -203,6 +214,7 @@ namespace gns::rendering
 		void UpdateStorageBuffer(void* data, size_t size);
 		void UpdatePointLightBuffer(void* data, size_t size);
 		void UpdateSpotLightBuffer(void* data, size_t size);
+		void UpdateDirLightBuffer(void* data, size_t size);
 
 		static void ImmediateSubmit(VkDevice device, VkQueue queue, std::function<void(VkCommandBuffer cmd)>&& function);
 		void DrawImGui(VkCommandBuffer cmd, VkImageView targetImageView);

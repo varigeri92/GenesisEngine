@@ -8,8 +8,10 @@
 #include "Gui/Windows/DockSpaceWindow.h"
 #include "Gui/Windows/HierarchyView.h"
 #include "Gui/Windows/InspectorWindow.h"
+#include "Gui/Windows/LightingSettings.h"
 #include "Gui/Windows/MenuWindow.h"
 #include "Gui/Windows/SceneView.h"
+#include "Gui/Windows/ShadowDebuggerWindow.h"
 
 
 #define PROJECT_NAME  "Genesis Engine - Editor"
@@ -187,6 +189,8 @@ int main(int argc, char* argv[])
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::InspectorWindow>();
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::HierarchyView>();
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::SceneView>();
+		gns::GuiWindowDrawer::CreateGUIWindow<ShadowDebuggerWindow>();
+		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::LightingSettings>();
 
 	});
 	engine.Run();

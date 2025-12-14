@@ -277,13 +277,15 @@ gns::rendering::VulkanTexture::~VulkanTexture()
 
 void gns::rendering::VulkanTexture::CreateSampler(VkFilter filter, VkSamplerAddressMode mode)
 {
+	filterMode = filter;
+	samplerMode = mode;
 	VkSamplerCreateInfo samplerInfo = utils::SamplerCreateInfo(filter, mode);
 	vkCreateSampler(image.vkDevice, &samplerInfo, nullptr, &sampler);
 }
 
 void gns::rendering::VulkanTexture::CreateDefaultSampler()
 {
-	CreateSampler(filter, samplerMode);
+	CreateSampler(filterMode, samplerMode);
 }
 
 void gns::rendering::VulkanTexture::Destroy()

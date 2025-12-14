@@ -115,7 +115,7 @@ namespace gns::rendering
 	{
 		VulkanImage image {};
 		VkSampler sampler{ VK_NULL_HANDLE };
-		VkFilter filter{ VK_FILTER_LINEAR };
+		VkFilter filterMode{ VK_FILTER_LINEAR };
 		VkSamplerAddressMode samplerMode{ VK_SAMPLER_ADDRESS_MODE_REPEAT };
 
 		VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };

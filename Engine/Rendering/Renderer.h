@@ -29,21 +29,38 @@ namespace gns::rendering
 {
 	class Device;
 
-	struct GlobalUniformData {
+	struct alignas(64) GlobalUniformData {
 		glm::mat4 view;
 		glm::mat4 proj;
 		glm::mat4 viewProj;
+		glm::mat4 dirLightViewProj;
 		glm::vec4 camPosition;
-		glm::vec4 ambientColor; //w -> intensity
-		glm::vec4 sunlightDirection; // w for sun power
-		glm::vec4 sunlightColor;
 		uint32_t pointLight_count;
 		uint32_t spotLight_count;
 		uint32_t dirLight_count;
+		uint32_t shadowMapSize { 1024 };
+		uint32_t pcf_kernelSize { 3 };
 		float exposure;
 		float gamma;
+		float normalOffset;
+		float shadowBias;
+		float slopeScale;
+		float halfExtent{ 10.f };
+		float nearPlane{ 1.f };
+
 	};
 
+	struct LightingSettings_Internal
+	{
+		uint32_t shadowMapSize{ 1024 };
+		uint32_t pcf_kernelSize{ 3 };
+		float normalOffset{ 0.00100 };
+		float shadowBias{ 0.30000 };
+		float slopeScale{ 0.00100 };
+		float halfExtent{ 10.00000f };
+		float nearPlane{ 1.f };
+		float farPlane{ 1000.f };
+	};
 
 	class Renderer
 	{
@@ -59,6 +76,7 @@ namespace gns::rendering
 
 	private:
 		Screen* m_screen;
+		LightingSettings_Internal m_lightingSettings;
 		GlobalUniformData globalUniform;
 
 		std::vector<ObjectDrawData> objects;
@@ -75,9 +93,11 @@ namespace gns::rendering
 		void UpdateBuffers();
 		void BuildDrawData();
 		void CreatePipelineForShader(Shader* shader);
-		Shader* CreateShader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
+		Shader* CreateShader(const std::string& name, const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
 		Shader* ReCreateShader(const guid guid);
 		void WaitForGPUIddle();
+		void BuildDirLightFrustum(glm::mat4 inverse_viewProj, glm::vec3 fwd);
+		void BuildDirLightFrustumBasic(glm::vec3 fwd, glm::vec3 scene_center);
 
 	public:
 		void Draw();
@@ -93,11 +113,6 @@ namespace gns::rendering
 		TextureHandle CreateTexture(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
 		TextureHandle CreateTexture(VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
 		VulkanTexture& GetTexture(TextureHandle handle);
-		/*
-		VulkanImage CreateImage(
-			void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
-		VulkanImage CreateImage(
-			VkExtent3D size, VkFormat format, VkImageUsageFlags usage);
-		 */
+
 	};
 }

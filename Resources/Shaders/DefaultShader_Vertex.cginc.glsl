@@ -66,6 +66,7 @@ layout(set = 0, binding = 2) uniform sampler2D normalTexture;
 layout(set = 0, binding = 3) uniform sampler2D metallicRoughnessTexture;
 layout(set = 0, binding = 4) uniform sampler2D aoTexture;
 layout(set = 0, binding = 5) uniform sampler2D emissiveTexture;
+layout(set = 0, binding = 6) uniform sampler2D shadowMap;
 
 struct PointLight
 {
@@ -80,6 +81,12 @@ struct SpotLight
     vec4 direction; // .w = angle
 };
 
+struct DirLight
+{
+    vec4 direction; // .w = unused
+    vec4 color; // .w = intensity
+};
+
 layout(std140, set = 1, binding = 2) readonly buffer PointLightBuffer{
     PointLight objects[];
 } pointLights;
@@ -87,6 +94,11 @@ layout(std140, set = 1, binding = 2) readonly buffer PointLightBuffer{
 layout(std140, set = 1, binding = 3) readonly buffer SpotLightBuffer{
     SpotLight objects[];
 } spotLights;
+
+layout(std140, set = 1, binding = 4) readonly buffer DirLightBuffer{
+    DirLight objects[];
+} dirLights;
+
 #endif
 
 //Shared
@@ -94,13 +106,19 @@ layout(set = 1, binding = 0) uniform  SceneData{
     mat4 view;
     mat4 proj;
     mat4 viewproj;
+    mat4 dirLightViewProj;
     vec4 camPosition;
-    vec4 ambientColor;
-    vec4 sunlightDirection; // w for sun power
-    vec4 sunlightColor;
     uint pointLight_count;
     uint spotLight_count;
     uint dirLight_count;
+    uint shadowMapSize;
+    uint pcf_kernelSize;
     float exposure;
     float gamma;
+    float normalOffset;
+    float shadowBias;
+    float slopeScale;
+    float halfExtent;
+    float nearPlane;
+    float farPlane;
 } sceneData;

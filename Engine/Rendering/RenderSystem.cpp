@@ -24,10 +24,10 @@ void gns::RenderSystem::SetActiveCamera(rendering::Camera* camera, entity::Trans
     m_cameraTransform = transform;
 }
 #pragma region resources
-gns::rendering::Shader* gns::RenderSystem::CreateShader(const std::string& vertexShaderPath,
+gns::rendering::Shader* gns::RenderSystem::CreateShader(const std::string& name, const std::string& vertexShaderPath,
 	const std::string& fragmentShaderPath)
 {
-    return  m_renderer->CreateShader(vertexShaderPath, fragmentShaderPath);
+    return  m_renderer->CreateShader(name, vertexShaderPath, fragmentShaderPath);
 }
 
 gns::rendering::Shader* gns::RenderSystem::ReCreateShader(const guid guid)
@@ -153,6 +153,11 @@ ImTextureID gns::RenderSystem::GetImGuiTexture(TextureHandle handle)
 {
     return  reinterpret_cast<ImTextureID>(m_renderer->GetTexture(handle).descriptorSet);
 }
+
+gns::rendering::LightingSettings* gns::RenderSystem::GetLightningSettings()
+{
+	return &m_lightingSettings;
+}
 #pragma endregion
 
 void gns::RenderSystem::InitSystem()
@@ -160,12 +165,20 @@ void gns::RenderSystem::InitSystem()
     m_renderer = new gns::rendering::Renderer(m_renderScreen);
 	m_renderer->InitImGui();
     m_offScreenRenderTargetTexture = Object::Find<rendering::Texture>("offscreen_texture");
-
-    const std::string v_shader_path = R"(Shaders\colored_triangle_mesh.vert)";
-    const std::string f_shader_path = R"(Shaders\tex_image.frag)";
-    rendering::Shader* shader = CreateShader(v_shader_path, f_shader_path);
-    rendering::Material* default_material = CreateMaterial(shader, "default_material");
-    ResetMaterialTextures(default_material);
+    {
+	    const std::string v_shader_path = R"(Shaders\colored_triangle_mesh.vert)";
+	    const std::string f_shader_path = R"(Shaders\tex_image.frag)";
+	    rendering::Shader* shader = CreateShader("default_shader", v_shader_path, f_shader_path);
+	    rendering::Material* default_material = CreateMaterial(shader, "default_material");
+	    ResetMaterialTextures(default_material);
+    }
+    {
+        const std::string v_shader_path = R"(Shaders\depth_only.vert)";
+        const std::string f_shader_path = R"(Shaders\depth_only.frag)";
+        rendering::Shader* depth_only_shader = CreateShader("depth_only", v_shader_path, f_shader_path);
+        depth_only_shader->front = false;
+        ReCreateShader(depth_only_shader->getGuid());
+    }
 
     if (m_offScreenRenderTargetTexture == nullptr)
     {
@@ -233,15 +246,26 @@ void gns::RenderSystem::UpdateCamera()
     m_renderer->globalUniform.proj = m_camera->m_projection;
     m_renderer->globalUniform.viewProj = m_camera->m_cameraMatrix;
     m_renderer->globalUniform.camPosition = { m_cameraTransform->position.x, m_cameraTransform->position.y,m_cameraTransform->position.z, 1 };
+
+	m_renderer->globalUniform.shadowMapSize = m_lightingSettings.shadowMapSize;
+    m_renderer->globalUniform.halfExtent = m_lightingSettings.halfExtent;
+    m_renderer->globalUniform.pcf_kernelSize = m_lightingSettings.pcf_kernelSize;
+    m_renderer->globalUniform.normalOffset = m_lightingSettings.normalOffset;
+    m_renderer->globalUniform.shadowBias = m_lightingSettings.shadowBias;
+    m_renderer->globalUniform.slopeScale = m_lightingSettings.slopeScale;
+
+    m_renderer->m_lightingSettings.normalOffset = m_lightingSettings.normalOffset;
+    m_renderer->m_lightingSettings.shadowBias = m_lightingSettings.shadowBias;
+    m_renderer->m_lightingSettings.slopeScale = m_lightingSettings.slopeScale;
+    m_renderer->m_lightingSettings.halfExtent = m_lightingSettings.halfExtent;
+    m_renderer->m_lightingSettings.nearPlane = m_lightingSettings.nearPlane;
+
 }
 
 
 void gns::RenderSystem::BeginGuiFrame()
 {
     m_renderer->BeginGuiFrame();
-
-    m_renderer->globalUniform.sunlightDirection = { 1,0,0,1 };
-    m_renderer->globalUniform.sunlightColor = { 0,1,0,1 };
 }
 
 void gns::RenderSystem::EndGuiFrame()

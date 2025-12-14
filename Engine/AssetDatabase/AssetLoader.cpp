@@ -82,6 +82,8 @@ void LoadEmbededTextures(gns::RenderSystem* renderSystem, gns::rendering::Materi
 void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const std::vector<guid>&, const std::vector<guid>&)>& onLoadSuccess_callback)
 {
     std::string assetDir = gns::fileUtils::GetContainingDirectory(mesh_asset.src_path);
+    if (assetDir == "")
+        assetDir = PathHelper::AssetsPath;
     LOG_INFO(assetDir);
     Assimp::Importer importer;
 
@@ -110,7 +112,7 @@ void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const s
     {
 	    const std::string v_shader_path = R"(Shaders\colored_triangle_mesh.vert)";
 	    const std::string f_shader_path = R"(Shaders\tex_image.frag)";
-	    rendering::Shader* shader = renderSystem->CreateShader(v_shader_path, f_shader_path);
+	    rendering::Shader* shader = renderSystem->CreateShader("default_shader", v_shader_path, f_shader_path);
 
         for (size_t t = 0; t < scene->mNumTextures; t++)
         {

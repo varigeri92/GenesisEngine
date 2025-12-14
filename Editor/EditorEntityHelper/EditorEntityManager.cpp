@@ -9,17 +9,43 @@ void gns::editor::entity::EditorEntityManager::CreateNewEntity(PreconfiguredEnti
 	case PreconfiguredEntityType::PointLight:
 		{
 			Entity entity = Entity::CreateEntity("new Point Light");
-			CreatePointLightEmpty(entity);
+			CreatePointLight(entity);
 		}
 		break;
+	case PreconfiguredEntityType::DirectionalLight:
+		{
+			Entity entity = Entity::CreateEntity("new Directional Light");
+			CreateDirectionalLight(entity);
+		}
+		break;
+	case PreconfiguredEntityType::SpotLight:
+	{
+		Entity entity = Entity::CreateEntity("new Spot Light");
+		CreateSpotLight(entity);
+	}
+	break;
 	default: Entity::CreateEntity("new Entity");
 		break;
 	}
 }
 
-void gns::editor::entity::EditorEntityManager::CreatePointLightEmpty(Entity& entity)
+void gns::editor::entity::EditorEntityManager::CreatePointLight(Entity& entity)
 {
+	entity.AddComponet<gns::rendering::LightComponent>();
 	entity.AddComponet<gns::rendering::PointLightComponent>();
+	entity.AddComponet<gns::rendering::ColorComponent>();
+}
+
+void gns::editor::entity::EditorEntityManager::CreateDirectionalLight(Entity& entity)
+{
+	entity.AddComponet<gns::rendering::LightComponent>();
+	entity.AddComponet<gns::rendering::ColorComponent>();
+}
+
+void gns::editor::entity::EditorEntityManager::CreateSpotLight(Entity& entity)
+{
+	entity.AddComponet<gns::rendering::LightComponent>();
+	entity.AddComponet<gns::rendering::SpotLightComponent>();
 	entity.AddComponet<gns::rendering::ColorComponent>();
 }
 

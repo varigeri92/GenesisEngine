@@ -20,7 +20,20 @@ namespace gns
 	{
 		struct Camera;
 		class Renderer;
+
+		struct LightingSettings
+		{
+			uint32_t shadowMapSize{ 1024 };
+			uint32_t pcf_kernelSize{ 1 };
+			float normalOffset{ 0.00005f };
+			float shadowBias{ 0.00550f };
+			float slopeScale{ 0.00100f};
+			float halfExtent{ 15.f };
+			float nearPlane{ -100.f };
+		};
 	}
+
+
 
 
 	class RenderSystem final : public gns::SystemBase
@@ -30,11 +43,9 @@ namespace gns
 		gns::rendering::Renderer* m_renderer;
 		rendering::Camera* m_camera;
 		entity::Transform* m_cameraTransform;
-
-		rendering::Texture* m_offScreenRenderTargetTexture;
 		Screen* m_renderScreen;
-
-
+		rendering::Texture* m_offScreenRenderTargetTexture;
+		rendering::LightingSettings m_lightingSettings;
 		void UpdateCamera();
 		void BeginGuiFrame();
 		void EndGuiFrame();
@@ -49,7 +60,7 @@ namespace gns
 
 		GNS_API void SetActiveCamera(rendering::Camera* camera, entity::Transform* transform);
 
-		GNS_API rendering::Shader* CreateShader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
+		GNS_API rendering::Shader* CreateShader(const std::string& name,const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
 		GNS_API rendering::Shader* ReCreateShader(const guid guid);
 		GNS_API rendering::Shader* GetShader(guid guid);
 		GNS_API rendering::Shader* GetShader(const std::string& name);
@@ -74,6 +85,7 @@ namespace gns
 		GNS_API void ResetMaterialTextures(rendering::Material* material);
 		GNS_API void UploadMesh(rendering::Mesh* mesh, uint32_t startIndex, uint32_t count);
 		GNS_API ImTextureID GetImGuiTexture(TextureHandle handle);
+		GNS_API rendering::LightingSettings* GetLightningSettings();
 		rendering::Renderer* GetRenderer() const { return m_renderer; };
 		void InitSystem() override;
 		void UpdateSystem(const float deltaTime) override;
