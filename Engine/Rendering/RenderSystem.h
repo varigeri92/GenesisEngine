@@ -25,11 +25,11 @@ namespace gns
 		{
 			uint32_t shadowMapSize{ 1024 };
 			uint32_t pcf_kernelSize{ 1 };
-			float normalOffset{ 0.0001f };
-			float shadowBias{ 0.01135 };
-			float slopeScale{ 0.5f };
-			float halfExtent{ 25.00000f };
-			float nearPlane{ -25.00000 };
+			float normalOffset{ 0.00005f };
+			float shadowBias{ 0.00550f };
+			float slopeScale{ 0.00100f};
+			float halfExtent{ 15.f };
+			float nearPlane{ -100.f };
 		};
 	}
 
