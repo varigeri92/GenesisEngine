@@ -1,12 +1,12 @@
 ﻿#include "InspectorWindow.h"
 #include <fstream>
 #include <spirv_cross/spirv_cross.hpp>
-#include "typedefs.h"
+#include "Genesis.h"
+#include "GenesisRendering.h"
+#include "GenesisSystems.h"
+#include "GenesisSerialization.h"
 #include "../../PathManager.h"
-#include "../../../Engine/AssetDatabase/Serializer/AssetSerializer.h"
-#include "../../../Engine/Rendering/RenderSystem.h"
-#include "../../../Engine/Rendering/Shader.h"
-#include "../../../Engine/Rendering/Objects/Material.h"
+#include "typedefs.h"
 #include "../../AssetManagement/AssetImporter.h"
 #include "../EditorGuiUtils/SelectionHandler.h"
 

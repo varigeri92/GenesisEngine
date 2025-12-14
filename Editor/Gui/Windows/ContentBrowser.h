@@ -1,8 +1,7 @@
 ﻿#pragma once
+#include "GenesisGui.h"
 #include <unordered_map>
-
 #include "../../AssetManagement/AssetLibrary.h"
-#include "../../Engine/GUI/GuiWindow.h"
 
 
 namespace gns::editor::gui

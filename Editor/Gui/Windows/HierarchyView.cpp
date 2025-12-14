@@ -1,10 +1,8 @@
 ﻿#include "HierarchyView.h"
 #include "Genesis.h"
 #include "GenesisSystems.h"
-#include "../../../Engine/ECS/EntitySerializer/EntitySerializer.h"
-#include "../../../Engine/Scene/SceneManager.h"
+#include "GenesisSerialization.h"
 #include "../../EditorEntityHelper/EditorEntityManager.h"
-
 #include "../EditorGuiUtils/SelectionHandler.h"
 
 

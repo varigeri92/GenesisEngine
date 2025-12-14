@@ -1,4 +1,5 @@
 ﻿#include "PathManager.h"
+#include "GenesisFileSystem.h"
 
 std::string PathManager::ProjectPath = {};
 std::string PathManager::AssetDatabasePath ={};

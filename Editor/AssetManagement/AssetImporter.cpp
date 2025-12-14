@@ -1,10 +1,10 @@
 ﻿#include "AssetImporter.h"
-#include <iostream>
-#include "GenesisRendering.h"
-#include "AssetLibrary.h"
 #include "Genesis.h"
+#include "GenesisRendering.h"
+#include "GenesisFileSystem.h"
+
+#include "AssetLibrary.h"
 #include "../PathManager.h"
-#include "../../Engine/Utils/FileSystemUtils.h"
 #define YAML_CPP_STATIC_DEFINE
 #include <fstream>
 #include <assimp/Importer.hpp>      // C++ importer interface

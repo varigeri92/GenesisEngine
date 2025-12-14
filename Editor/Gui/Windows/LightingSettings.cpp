@@ -2,8 +2,6 @@
 #include "Genesis.h"
 #include "GenesisRendering.h"
 #include "GenesisSystems.h"
-#include "imgui.h"
-#include "../../../Engine/ECS/SystemsManager.h"
 
 
 namespace gns::editor

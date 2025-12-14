@@ -1,16 +1,11 @@
 ﻿#include "ContentBrowser.h"
-
-#include <filesystem>
-#include <iostream>
-
+#include "Genesis.h"
+#include "GenesisFileSystem.h"
+#include "GenesisRendering.h"
+#include "GenesisSystems.h"
 #include "DockSpaceWindow.h"
-#include "../../PathManager.h"
-#include "../../../Engine/Utils/FileSystemUtils.h"
 #include "../../AssetManagement/AssetImporter.h"
-#include "../../Engine/Utils/Logger.h"
-#include "../../Engine/Rendering/RenderSystem.h"
-#include "../../Engine/ECS/SystemsManager.h"
-#include "../../Engine/Rendering/Objects/Texture.h"
+#include "../../PathManager.h"
 #include "../EditorGuiUtils/SelectionHandler.h"
 
 

@@ -114,11 +114,6 @@ void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const s
 	    const std::string f_shader_path = R"(Shaders\tex_image.frag)";
 	    rendering::Shader* shader = renderSystem->CreateShader("default_shader", v_shader_path, f_shader_path);
 
-        for (size_t t = 0; t < scene->mNumTextures; t++)
-        {
-            LOG_INFO(scene->mTextures[t]->mFilename.C_Str());
-        }
-
         for (size_t m = 0; m < scene->mNumMaterials; m++)
         {
             aiMaterial* mat = scene->mMaterials[m];
