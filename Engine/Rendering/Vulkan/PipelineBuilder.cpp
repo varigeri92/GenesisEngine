@@ -20,26 +20,17 @@ namespace gns::rendering
 	void PipelineBuilder::Clear()
 	{
 	    m_inputAssembly = { .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-
 	    m_rasterizer = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
-
 	    m_colorBlendAttachment = {};
-
 	    m_multisampling = { .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-
 	    m_pipelineLayout = {};
-
 	    m_depthStencil = { .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-
 	    m_renderInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
-
 	    m_shaderStages.clear();
 	}
 
 	VkPipeline PipelineBuilder::BuildPipeline(VkDevice device)
 	{
-	    // make viewport state from our stored viewport and scissor.
-	    // at the moment we wont support multiple viewports or scissors
 	    VkPipelineViewportStateCreateInfo viewportState = {};
 	    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	    viewportState.pNext = nullptr;
@@ -47,28 +38,18 @@ namespace gns::rendering
 	    viewportState.viewportCount = 1;
 	    viewportState.scissorCount = 1;
 
-	    // setup dummy color blending. We arent using transparent objects yet
-	    // the blending is just "no blend", but we do write to the color attachment
-	    VkPipelineColorBlendStateCreateInfo colorBlending = {};
+		VkPipelineColorBlendStateCreateInfo colorBlending = {};
 	    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	    colorBlending.pNext = nullptr;
-
 	    colorBlending.logicOpEnable = VK_FALSE;
 	    colorBlending.logicOp = VK_LOGIC_OP_COPY;
 	    colorBlending.attachmentCount = 1;
 	    colorBlending.pAttachments = &m_colorBlendAttachment;
 
-	    // completely clear VertexInputStateCreateInfo, as we have no need for it
 	    VkPipelineVertexInputStateCreateInfo _vertexInputInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 
-
-	    // build the actual pipeline
-	    // we now use all of the info structs we have been writing into into this one
-	    // to create the pipeline
 	    VkGraphicsPipelineCreateInfo pipelineInfo = { .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
-	    // connect the renderInfo to the pNext extension mechanism
 	    pipelineInfo.pNext = &m_renderInfo;
-
 	    pipelineInfo.stageCount = (uint32_t)m_shaderStages.size();
 	    pipelineInfo.pStages = m_shaderStages.data();
 	    pipelineInfo.pVertexInputState = &_vertexInputInfo;
@@ -80,9 +61,7 @@ namespace gns::rendering
 	    pipelineInfo.pDepthStencilState = &m_depthStencil;
 	    pipelineInfo.layout = m_pipelineLayout;
 
-
 	    VkDynamicState state[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-
 	    VkPipelineDynamicStateCreateInfo dynamicInfo = { .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
 	    dynamicInfo.pDynamicStates = &state[0];
 	    dynamicInfo.dynamicStateCount = 2;
@@ -94,7 +73,7 @@ namespace gns::rendering
 	        nullptr, &newPipeline)
 	        != VK_SUCCESS) {
 	        LOG_ERROR("Failed To Create Pipeline");
-	        return VK_NULL_HANDLE; // failed to create graphics pipeline
+	        return VK_NULL_HANDLE;
 	    }
 	    else {
 	        return newPipeline;
@@ -136,8 +115,6 @@ namespace gns::rendering
 	void PipelineBuilder::SetInputTopology(VkPrimitiveTopology topology)
 	{
 	    m_inputAssembly.topology = topology;
-	    // we are not going to use primitive restart on the entire tutorial so leave
-	    // it on false
 	    m_inputAssembly.primitiveRestartEnable = VK_FALSE;
 	}
 
@@ -155,12 +132,10 @@ namespace gns::rendering
 
 	void PipelineBuilder::SetMultisampling(bool enable)
 	{
-		m_multisampling.sampleShadingEnable = VK_FALSE;
-		// multisampling defaulted to no multisampling (1 sample per pixel)
+		m_multisampling.sampleShadingEnable = enable? VK_TRUE : VK_FALSE;
 		m_multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 		m_multisampling.minSampleShading = 1.0f;
 		m_multisampling.pSampleMask = nullptr;
-		// no alpha to coverage either
 		m_multisampling.alphaToCoverageEnable = VK_FALSE;
 		m_multisampling.alphaToOneEnable = VK_FALSE;
 	}
@@ -214,7 +189,6 @@ namespace gns::rendering
 	void PipelineBuilder::SetColorAttachmentFormat(VkFormat format)
 	{
 		m_colorAttachmentFormat = format;
-		// connect the format to the renderInfo  structure
 		m_renderInfo.colorAttachmentCount = 1;
 		m_renderInfo.pColorAttachmentFormats = &m_colorAttachmentFormat;
 	}

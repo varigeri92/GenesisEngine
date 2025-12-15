@@ -48,11 +48,13 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
 {
     currentBackgroundEffect = 0;
     InitVulkan();
-    m_swapchain = { m_device, m_physicalDevice, m_surface, m_allocator };
     CreateSwapchain();
     offscreen_Texture = Object::Create<Texture>("offscreen_texture");
-    auto[handle, textureData] = CreateTexture(m_swapchain.GetRenderTargetImage().imageExtent, VK_FORMAT_R32G32B32A32_SFLOAT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+    auto[handle, textureData] = CreateTexture(m_swapchain.GetRenderTargetImage().imageExtent, 
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | 
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | 
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
     offscreen_Texture->handle = handle;
 
     m_shadowMap = Object::Create<Texture>("shadow_map");
@@ -77,6 +79,7 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
         VK_IMAGE_USAGE_TRANSFER_DST_BIT);
     m_ShadowTexture_debug->handle = smd_handle;
     smd_textureData.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+
     InitCommands();
     InitSyncStructures();
     InitDescriptors();
@@ -106,7 +109,7 @@ gns::rendering::Device::~Device()
 {
     vkDeviceWaitIdle(m_device);
     vkDestroyDescriptorSetLayout(m_device, m_perFrameDescriptorLayout, nullptr);
-
+    VulkanSampler::Clear(m_device);
     for (size_t i = 0; i < m_imageCount; i++)
     {
         vkDestroyCommandPool(m_device, m_frames[i].commandPool, nullptr);
@@ -269,15 +272,15 @@ bool gns::rendering::Device::InitVulkan()
 #ifdef VK_LOG
     auto inst_ret = builder.request_validation_layers(true).set_debug_callback(VulkanDebugCallback)
         .set_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-        .set_app_name("Awesome Vulkan Application")
-        .set_engine_name("Excellent Game Engine")
+        .set_app_name("Gns App")
+        .set_engine_name("Genesis Engine")
         .require_api_version(1, 3, 0)
         .set_app_version(0, 0, 1)
         .build();
 #else
-    auto inst_ret = builder.request_validation_layers(false).set_app_name("Awesome Vulkan Application")
-        .set_engine_name("Excellent Game Engine")
-        .require_api_version(1, 2, 0)
+    auto inst_ret = builder.request_validation_layers(false).set_app_name("Gns App")
+        .set_engine_name("Genesis Engine")
+        .require_api_version(1, 3, 0)
         .set_app_version(0, 0, 1)
         .build();
 #endif
@@ -384,6 +387,7 @@ bool gns::rendering::Device::InitVulkan()
 
 void gns::rendering::Device::CreateSwapchain()
 {
+    m_swapchain = { m_device, m_physicalDevice, m_surface, m_allocator };
     m_swapchain.Create(m_screen);
 }
 
@@ -402,7 +406,7 @@ void gns::rendering::Device::InitDescriptors()
     {
         { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
     };
-    m_globalDescriptorAllocator.InitPool(m_device, 10, sizes);
+    m_globalDescriptorAllocator.InitPool(m_device, 100, sizes);
     m_swapchain.AllocateDescriptorSet(m_globalDescriptorAllocator);
 
 

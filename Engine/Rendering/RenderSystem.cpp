@@ -13,10 +13,6 @@
 #include "../Utils/FileSystemUtils.h"
 #include "../Window/Screen.h"
 
-void ReadShaderAttributes(gns::rendering::Shader* shader)
-{
-    
-}
 
 void gns::RenderSystem::SetActiveCamera(rendering::Camera* camera, entity::Transform* transform)
 {

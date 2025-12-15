@@ -29,7 +29,7 @@ public:
 	};
 	GNS_API static void LogMessage(std::string project, LogLevel level, std::string message, std::string file, uint32_t line);
 };
-
+#ifdef _DEBUG
 #define LOG_VERBOSE(msg) \
 	Logger::LogMessage( PROJECT_SRC,Logger::LogLevel::Verbose, msg, FILE_NAME,  __LINE__)
 #define LOG_INFO(msg) \
@@ -40,3 +40,11 @@ public:
 	Logger::LogMessage(PROJECT_SRC, Logger::LogLevel::Error, msg, FILE_NAME,  __LINE__)
 #define LOG_FATAL(msg) \
 	Logger::LogMessage(PROJECT_SRC, Logger::LogLevel::Fatal, msg, FILE_NAME,  __LINE__)
+#else
+#define LOG_VERBOSE(msg)
+#define LOG_INFO(msg)
+#define LOG_WARNING(msg)
+#define LOG_ERROR(msg)
+#define LOG_FATAL(msg)
+#endif
+

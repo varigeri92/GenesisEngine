@@ -104,6 +104,7 @@ namespace gns::rendering
 		void UploadMesh(Mesh* mesh, uint32_t startIndex, uint32_t count) const;
 		void CreateTextureDescriptorSet(Texture* texture);
 		void UpdateTextureDescriptorSet(Texture* texture);
+		void CreateSampler(Texture* texture);
 
 		VulkanBuffer CreateUniformBuffer(uint32_t size);
 		VulkanBuffer CreateStagingBuffer(uint32_t size);

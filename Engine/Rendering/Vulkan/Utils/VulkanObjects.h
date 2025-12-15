@@ -79,11 +79,6 @@ namespace gns::rendering
 		VmaAllocation allocation{ VK_NULL_HANDLE };
 		VkExtent3D imageExtent{ 0, 0, 1};
 		VkFormat imageFormat {VK_FORMAT_UNDEFINED};
-		/*
-		VkSampler sampler {VK_NULL_HANDLE};
-		VkDescriptorSet texture_descriptorSet{ VK_NULL_HANDLE };
-		VkDescriptorSetLayout setlayout{ VK_NULL_HANDLE };
-		*/
 		VkQueue queue{ VK_NULL_HANDLE };
 
 		static VulkanImage Create(
@@ -109,6 +104,15 @@ namespace gns::rendering
 			VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
 		void CreateImage(void* data, VkExtent3D size,
 			VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+	};
+
+	struct VulkanSampler
+	{
+		typedef uint64_t SamplerID;
+		static std::unordered_map<SamplerID, VkSampler> sSamplerCache;
+		static SamplerID GetSamplerID(VkFilter filter, VkSamplerAddressMode mode);
+		static VkSampler GetSampler(gns::rendering::VulkanSampler::SamplerID id);
+		static void Clear(VkDevice device);
 	};
 
 	struct VulkanTexture

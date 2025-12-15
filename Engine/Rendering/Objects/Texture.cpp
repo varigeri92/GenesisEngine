@@ -33,9 +33,11 @@ void gns::rendering::Texture::Dispose()
 
 void gns::rendering::Texture::CreateTexture(void* data, uint32_t width, uint32_t height, uint32_t mipLevels, bool keepData)
 {
-	auto renderSystem = SystemsManager::GetSystem<RenderSystem>();
-	handle = renderSystem->GetRenderer()->
-	CreateTexture(data, { width, height, 1 }, VK_FORMAT_R8G8B8A8_UNORM,VK_IMAGE_USAGE_SAMPLED_BIT);
+	auto* renderer = SystemsManager::GetSystem<RenderSystem>()->GetRenderer();
+	handle = renderer->CreateTexture(data, { width, height, 1 }, VK_FORMAT_R8G8B8A8_UNORM,VK_IMAGE_USAGE_SAMPLED_BIT);
+	renderer->CreateTextureDescriptorSet(this);
+	renderer->UpdateTextureDescriptorSet(this);
+	renderer->CreateSampler(this);
 }
 
 void gns::rendering::Texture::DisposeInternal()
