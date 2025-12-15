@@ -73,6 +73,7 @@ namespace gns::rendering
 		Texture* GetDefaultTexture(const std::string& textureName);
 		void DestroyTexture(TextureHandle handle);
 		void DestroyMesh(MeshHandle handle);
+		void DisposeShader(ShaderHandle handle);
 
 	private:
 		Screen* m_screen;
@@ -98,6 +99,7 @@ namespace gns::rendering
 		void WaitForGPUIddle();
 		void BuildDirLightFrustum(glm::mat4 inverse_viewProj, glm::vec3 fwd);
 		void BuildDirLightFrustumBasic(glm::vec3 fwd, glm::vec3 scene_center);
+		void SetShadowShader(rendering::Shader* shader);
 
 	public:
 		void Draw();

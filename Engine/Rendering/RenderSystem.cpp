@@ -156,6 +156,11 @@ gns::rendering::LightingSettings* gns::RenderSystem::GetLightningSettings()
 }
 #pragma endregion
 
+void gns::RenderSystem::DisposeShader(ShaderHandle handle)
+{
+    m_renderer->DisposeShader(handle);
+}
+
 void gns::RenderSystem::InitSystem()
 {
     m_renderer = new gns::rendering::Renderer(m_renderScreen);
@@ -174,11 +179,12 @@ void gns::RenderSystem::InitSystem()
         rendering::Shader* depth_only_shader = CreateShader("depth_only", v_shader_path, f_shader_path);
         depth_only_shader->front = false;
         ReCreateShader(depth_only_shader->getGuid());
+        m_renderer->SetShadowShader(depth_only_shader);
     }
 
     if (m_offScreenRenderTargetTexture == nullptr)
     {
-        LOG_ERROR("Could not find texture!");
+        LOG_ERROR("Could not find RT texture!");
     }
 }
 bool keep_aspect = true;
@@ -205,6 +211,7 @@ void gns::RenderSystem::CleanupSystem()
 	m_renderer->WaitForGPUIddle();
     Object::ClearAll();
 }
+
 
 gns::RenderSystem::RenderSystem(Screen* screen)
 {

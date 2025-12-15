@@ -105,6 +105,11 @@ void gns::rendering::Renderer::DestroyMesh(MeshHandle handle)
     m_device->DestroyMesh(handle);
 }
 
+void gns::rendering::Renderer::DisposeShader(ShaderHandle handle)
+{
+    m_device->DisposeShader(handle);
+}
+
 VkDescriptorPool imguiPool;
 void gns::rendering::Renderer::InitImGui()
 {
@@ -353,9 +358,11 @@ void gns::rendering::Renderer::BuildDrawData()
 
 void gns::rendering::Renderer::CreatePipelineForShader(Shader* shader)
 {
-    if(nullptr != Object::Get<Shader>(shader->m_guid))
+    if (nullptr != Object::Get<Shader>(shader->m_guid))
     {
-		m_device->CreatePipeline(*shader);
+        auto [handle, vkShader] = m_device->CreateShader();
+        shader->handle = handle;
+		m_device->CreatePipeline(handle, *shader);
     }
     else
     {
@@ -367,12 +374,10 @@ void gns::rendering::Renderer::CreatePipelineForShader(Shader* shader)
 
 gns::rendering::Shader* gns::rendering::Renderer::CreateShader(const std::string& name, const std::string& vertexShaderPath, const std::string& fragmentShaderPath)
 {
-    LOG_INFO(vertexShaderPath + fragmentShaderPath);
     size_t shader_guid = hashString(vertexShaderPath+fragmentShaderPath);
     if(std::find(m_shaderCache.begin(), m_shaderCache.end(), shader_guid) != m_shaderCache.end())
         return Object::Get<Shader>(shader_guid);
-    
-    
+
     Shader* shader = Object::CreateWithGuid<rendering::Shader>(shader_guid, vertexShaderPath, fragmentShaderPath, name);
     CreatePipelineForShader(shader);
 	m_shaderCache.push_back(shader_guid);
@@ -584,6 +589,11 @@ void gns::rendering::Renderer::BuildDirLightFrustumBasic(glm::vec3 fwd, glm::vec
     lightProj[1][1] *= -1.0f;
     globalUniform.dirLightViewProj = lightProj * lightView;
 
+}
+
+void gns::rendering::Renderer::SetShadowShader(Shader* shader)
+{
+    m_device->SetShadowShader(shader);
 }
 
 gns::rendering::VulkanBuffer gns::rendering::Renderer::CreateUniformBuffer(uint32_t size)

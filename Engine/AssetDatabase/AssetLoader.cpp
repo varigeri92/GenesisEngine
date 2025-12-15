@@ -60,7 +60,6 @@ void LoadTextures(gns::RenderSystem* renderSystem, gns::rendering::Material* mat
         aiString str;
         mat->GetTexture(type, i, &str);
         const std::string texture_path = asset_directory +"\\"+ str.C_Str();
-    	LOG_INFO(texture_path);
         rendering::Texture* texture = renderSystem->CreateTexture(PathHelper::FromAssetsRelative(texture_path));
         if(texture == nullptr)
         {
@@ -84,7 +83,6 @@ void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const s
     std::string assetDir = gns::fileUtils::GetContainingDirectory(mesh_asset.src_path);
     if (assetDir == "")
         assetDir = PathHelper::AssetsPath;
-    LOG_INFO(assetDir);
     Assimp::Importer importer;
 
     const aiScene* scene = importer.ReadFile(PathHelper::FromAssetsRelative(mesh_asset.src_path),

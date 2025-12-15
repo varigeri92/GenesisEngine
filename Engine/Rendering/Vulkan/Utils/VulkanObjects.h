@@ -168,10 +168,20 @@ namespace gns::rendering
 	struct VulkanShader
 	{
 		friend class Device;
+		VkDevice m_device;
 		VkPipeline m_pipeline;
 		VkPipelineLayout m_pipelineLayout;
 		VkDescriptorSetLayout m_descriptorSetLayout;
-		VkDevice device;
+
+		VulkanShader()=default;
+		VulkanShader(VkDevice device);
+		~VulkanShader();
+
+		VulkanShader(VulkanShader&& other) = delete;
+		VulkanShader(const VulkanShader&) = delete;
+		VulkanShader& operator=(const VulkanShader&) = delete;
+		VulkanShader& operator=(VulkanShader&& other) = delete;
+
 		void Destroy();
 	};
 

@@ -74,6 +74,9 @@ namespace gns::rendering
 
 		size_t meshCounter{0};
 		std::unordered_map<MeshHandle, VulkanMesh> meshes;
+
+		size_t shaderCounter{ 0 };
+		std::unordered_map<ShaderHandle, VulkanShader> shaders;
 	};
 
 	class Device
@@ -88,6 +91,8 @@ namespace gns::rendering
 	public:
 		Device(Screen* screen);
 		~Device();
+		void SetShadowShader(Shader* shader);
+		void DisposeShader(ShaderHandle handle);
 		Device(Device& other) = delete;
 		Device operator=(Device& other) = delete;
 
@@ -103,12 +108,13 @@ namespace gns::rendering
 
 		std::tuple<TextureHandle, VulkanTexture&> CreateTexture(
 			void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
-
-		std::tuple<TextureHandle, gns::rendering::VulkanTexture&> CreateTexture(
+		std::tuple<TextureHandle, VulkanTexture&> CreateTexture(
 			VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
 
-		VulkanMesh& GetMesh(MeshHandle handle);
+		std::tuple<ShaderHandle,VulkanShader&> CreateShader();
+		VulkanShader& GetShader(ShaderHandle handle);
 		MeshHandle CreateMesh();
+		VulkanMesh& GetMesh(MeshHandle handle);
 
 	private:
 		Screen* m_screen;
@@ -167,7 +173,6 @@ namespace gns::rendering
 		Shader* m_currentBoundShader = nullptr;
 		Material* m_currentMaterial = nullptr;
 		Shader* m_shadowShader = nullptr;
-
 		size_t m_currentBoundShader_guid = 0;
 		size_t m_currentBoundMaterial_guid = 0;
 
@@ -178,7 +183,8 @@ namespace gns::rendering
 		void CreateSwapchain();
 		void ResizeSwapchain();
 		void DestroySwapchain();
-		void CreatePipeline(Shader& shader);
+		//void CreatePipeline(Shader& shader);
+		void CreatePipeline(ShaderHandle handle, Shader& shaderObject);
 
 		void InitCommands();
 		void InitDescriptors();
