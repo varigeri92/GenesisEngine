@@ -127,6 +127,11 @@ gns::rendering::Device::~Device()
     vkb::destroy_device(m_vkb_device);
 }
 
+void gns::rendering::Device::SetShadowShader(Shader* shader)
+{
+    m_shadowShader = shader;
+}
+
 #pragma region Device_Initalization_Functions
 
 void gns::rendering::Device::InitPipelines()
@@ -215,10 +220,11 @@ void gns::rendering::Device::InitBackgroundPipelines()
         });
 }
 
+/*
 void gns::rendering::Device::CreatePipeline(Shader& shader)
 {
     LOG_INFO("CreatingPipeline for Shader:" + std::to_string(shader.m_guid));
-    shader.shader.device = m_device;
+    shader.shader.m_device = m_device;
     VkPushConstantRange bufferRange{};
     bufferRange.offset = 0;
     bufferRange.size = sizeof(PushConstants);
@@ -262,6 +268,56 @@ void gns::rendering::Device::CreatePipeline(Shader& shader)
         pipelineBuilder.SetColorAttachmentFormat(m_swapchain.GetRenderTargetImage().imageFormat);
         pipelineBuilder.SetDepthFormat(m_swapchain.GetDepthImage().imageFormat);
         shader.shader.m_pipeline = pipelineBuilder.BuildPipeline(m_device);
+    }
+}
+ */
+
+void gns::rendering::Device::CreatePipeline(ShaderHandle handle, Shader& shaderObject)
+{
+    VulkanShader& vkShader = GetShader(handle);
+    VkPushConstantRange bufferRange{};
+    bufferRange.offset = 0;
+    bufferRange.size = sizeof(PushConstants);
+    bufferRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    {
+        DescriptorLayoutBuilder builder;
+        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+        builder.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        builder.AddBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        builder.AddBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        builder.AddBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        builder.AddBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        builder.AddBinding(6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        vkShader.m_descriptorSetLayout = builder.Build(m_device, VK_SHADER_STAGE_FRAGMENT_BIT);
+    }
+
+    VkDescriptorSetLayout layouts[] = { vkShader.m_descriptorSetLayout, m_perFrameDescriptorLayout };
+
+    VkPipelineLayoutCreateInfo pipeline_layout_info = utils::PipelineLayoutCreateInfo();
+    pipeline_layout_info.pPushConstantRanges = &bufferRange;
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    pipeline_layout_info.pSetLayouts = layouts;
+    pipeline_layout_info.setLayoutCount = 2;
+
+    _VK_CHECK(vkCreatePipelineLayout(m_device, &pipeline_layout_info, nullptr, &vkShader.m_pipelineLayout),
+        "Failed to crete pipeline Layout.");
+    {
+        PipelineBuilder pipelineBuilder(this);
+        pipelineBuilder.m_pipelineLayout = vkShader.m_pipelineLayout;
+        pipelineBuilder.SetShaders(shaderObject);
+        pipelineBuilder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        pipelineBuilder.SetPolygonMode(VK_POLYGON_MODE_FILL);
+
+        const VkCullModeFlags cullMode = shaderObject.front ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_FRONT_BIT;
+
+        pipelineBuilder.SetCullMode(cullMode, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+        pipelineBuilder.SetMultisampling(false);
+        pipelineBuilder.SetBlending(PipelineBuilder::BlendingMode::disabled);
+        pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_LESS_OR_EQUAL);
+        pipelineBuilder.SetColorAttachmentFormat(m_swapchain.GetRenderTargetImage().imageFormat);
+        pipelineBuilder.SetDepthFormat(m_swapchain.GetDepthImage().imageFormat);
+        vkShader.m_pipeline = pipelineBuilder.BuildPipeline(m_device);
     }
 }
 
@@ -326,7 +382,7 @@ bool gns::rendering::Device::InitVulkan()
         return false;
     }
     m_physicalDevice = phys_ret.value();
-    LOG_INFO("Phym_device Selected!");
+    LOG_INFO("Physical_device Selected!");
     vkb::DeviceBuilder device_builder{ phys_ret.value() };
 
     auto dev_ret = device_builder.build();
@@ -430,7 +486,7 @@ void gns::rendering::Device::InitDescriptors()
         builder.AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // object buffer
         builder.AddBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // point light buffer
         builder.AddBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // spot light buffer
-        builder.AddBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // spot light buffer
+        builder.AddBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // dir light buffer
         m_perFrameDescriptorLayout = builder.Build(m_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     }
 
@@ -663,7 +719,7 @@ void gns::rendering::Device::DrawShadowMap(VkCommandBuffer cmd,
 	std::vector<size_t>& indices,
     std::vector<rendering::Mesh*>& meshes)
 {
-
+    VulkanShader& vkShader = GetShader(m_shadowShader->handle);
     VulkanTexture& shadow_colorImage = GetTexture(m_ShadowTexture_debug->handle);
     VulkanTexture& shadow_depthImage = GetTexture(m_shadowMap->handle);
 
@@ -676,12 +732,11 @@ void gns::rendering::Device::DrawShadowMap(VkCommandBuffer cmd,
         utils::RenderingInfo({ m_shadowMapSize,m_shadowMapSize }, &sm_colorAttachment, &sm_depthAttachment);
     vkCmdBeginRendering(cmd, &renderInfo);
 
-    m_shadowShader = Object::Find<Shader>("depth_only");
     VkDescriptorSet perFrameDescriptor = GetCurrentFrame().frameDescriptors.Allocate(m_device, m_perFrameDescriptorLayout);
     UpdatePerFrameDescriptors(perFrameDescriptor);
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_shadowShader->shader.m_pipeline);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vkShader.m_pipeline);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        m_shadowShader->shader.m_pipelineLayout, 1, 1, &perFrameDescriptor, 0, nullptr);
+        vkShader.m_pipelineLayout, 1, 1, &perFrameDescriptor, 0, nullptr);
 
     for (size_t i = 0; i < indices.size(); i++)
     {
@@ -756,23 +811,24 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
         Mesh* mesh = meshes[i];
         Material* material = materials[i];
         VulkanMesh& vkMesh = GetMesh(mesh->handle);
-        if (material->shader != m_currentBoundShader)
-        {
-		    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, material->shader->shader.m_pipeline);
-		    m_currentBoundShader = material->shader;
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                material->shader->shader.m_pipelineLayout, 1, 1, &perFrameDescriptor, 0, nullptr);
-        }
+	    VulkanShader& vkShader = GetShader(material->shader->handle);
 
         if (material != m_currentMaterial)
         {
-            VkDescriptorSet imageSet = GetCurrentFrame().frameDescriptors.Allocate(m_device, material->shader->shader.m_descriptorSetLayout);
+	        if (material->shader != m_currentBoundShader)
+	        {
+ 			    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vkShader.m_pipeline);
+			    m_currentBoundShader = material->shader;
+	            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+	                vkShader.m_pipelineLayout, 1, 1, &perFrameDescriptor, 0, nullptr);
+	        }
+            VkDescriptorSet imageSet = GetCurrentFrame().frameDescriptors.Allocate(m_device, vkShader.m_descriptorSetLayout);
             UpdateMaterialData(imageSet, *material);
 
             std::vector<VkDescriptorSet> sets = { imageSet };
 
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                material->shader->shader.m_pipelineLayout, 0, sets.size(), sets.data(), 0, nullptr);
+                vkShader.m_pipelineLayout, 0, sets.size(), sets.data(), 0, nullptr);
             m_currentMaterial = material;
         }
 
@@ -780,7 +836,7 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
         push_constants.vertexBuffer = objects[objectIndex].vertexBufferAddress;
         push_constants.worldMatrix = objects[objectIndex].objectMatrix;
 
-        vkCmdPushConstants(cmd, material->shader->shader.m_pipelineLayout,
+        vkCmdPushConstants(cmd, vkShader.m_pipelineLayout,
             VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
         vkCmdBindIndexBuffer(cmd, vkMesh.indexBuffer.buffer, 0, vkMesh.indexType);
         vkCmdDrawIndexed(cmd, vkMesh.indexBufferRange.count,
@@ -965,6 +1021,24 @@ std::tuple<TextureHandle, gns::rendering::VulkanTexture&> gns::rendering::Device
         handle, *this, extent, format, usage);
 
     return { handle, resources.textures[handle] };
+}
+
+std::tuple<ShaderHandle, gns::rendering::VulkanShader&> gns::rendering::Device::CreateShader()
+{
+    ShaderHandle handle{ resources.shaderCounter++ };
+    auto [it, inserted] = resources.shaders.try_emplace(handle, m_device);
+    return { handle, resources.shaders[handle] };
+}
+
+gns::rendering::VulkanShader& gns::rendering::Device::GetShader(ShaderHandle handle)
+{
+    auto it = resources.shaders.find(handle);
+    if (it != resources.shaders.end()) {
+        return it->second;
+    }
+    else {
+        return resources.shaders[{Handle::Invalid}];
+    }
 }
 
 gns::rendering::VulkanMesh& gns::rendering::Device::GetMesh(MeshHandle handle)

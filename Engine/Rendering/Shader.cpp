@@ -6,12 +6,10 @@ gns::rendering::Shader::Shader(const std::string& vertexShaderPath, const std::s
 	Object(name),
 	vertexShaderPath(vertexShaderPath),
 	fragmentShaderPath(fragmentShaderPath)
-{
-	LOG_INFO("Shader ctor");
-}
+{}
 
 void gns::rendering::Shader::Dispose()
 {
-	shader.Destroy();
+	//shader.Destroy();
 	Object::Dispose();
 }

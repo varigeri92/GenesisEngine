@@ -331,10 +331,17 @@ void gns::rendering::VulkanMesh::Destroy()
 	indexBuffer.Destroy();
 }
 
+gns::rendering::VulkanShader::VulkanShader(VkDevice device) :m_device(device){}
+
+gns::rendering::VulkanShader::~VulkanShader()
+{
+	Destroy();
+}
+
 void gns::rendering::VulkanShader::Destroy()
 {
-	vkDestroyPipelineLayout(device, m_pipelineLayout, nullptr);
-	vkDestroyPipeline(device, m_pipeline, nullptr);
-	vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr);
+	vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
+	vkDestroyPipeline(m_device, m_pipeline, nullptr);
+	vkDestroyDescriptorSetLayout(m_device, m_descriptorSetLayout, nullptr);
 }
 

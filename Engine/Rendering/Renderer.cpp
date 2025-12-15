@@ -353,9 +353,11 @@ void gns::rendering::Renderer::BuildDrawData()
 
 void gns::rendering::Renderer::CreatePipelineForShader(Shader* shader)
 {
-    if(nullptr != Object::Get<Shader>(shader->m_guid))
+    if (nullptr != Object::Get<Shader>(shader->m_guid))
     {
-		m_device->CreatePipeline(*shader);
+        auto [handle, vkShader] = m_device->CreateShader();
+        shader->handle = handle;
+		m_device->CreatePipeline(handle, *shader);
     }
     else
     {
@@ -584,6 +586,11 @@ void gns::rendering::Renderer::BuildDirLightFrustumBasic(glm::vec3 fwd, glm::vec
     lightProj[1][1] *= -1.0f;
     globalUniform.dirLightViewProj = lightProj * lightView;
 
+}
+
+void gns::rendering::Renderer::SetShadowShader(Shader* shader)
+{
+    m_device->SetShadowShader(shader);
 }
 
 gns::rendering::VulkanBuffer gns::rendering::Renderer::CreateUniformBuffer(uint32_t size)

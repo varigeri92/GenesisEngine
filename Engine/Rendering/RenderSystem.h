@@ -91,6 +91,5 @@ namespace gns
 		void UpdateSystem(const float deltaTime) override;
 		void FixedUpdate(const float fixedDeltaTime) override;
 		void CleanupSystem() override;
-
 	};
 }

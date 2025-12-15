@@ -98,6 +98,7 @@ namespace gns::rendering
 		void WaitForGPUIddle();
 		void BuildDirLightFrustum(glm::mat4 inverse_viewProj, glm::vec3 fwd);
 		void BuildDirLightFrustumBasic(glm::vec3 fwd, glm::vec3 scene_center);
+		void SetShadowShader(rendering::Shader* shader);
 
 	public:
 		void Draw();

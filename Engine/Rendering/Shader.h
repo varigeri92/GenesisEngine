@@ -9,10 +9,8 @@ namespace gns::rendering
 	{
 	public:
 		ShaderHandle handle;
-
 		std::string vertexShaderPath;
 		std::string fragmentShaderPath;
-		gns::rendering::VulkanShader shader;
 		bool front = true;
 
 		Shader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath, const std::string& name);
