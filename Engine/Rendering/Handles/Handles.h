@@ -45,6 +45,26 @@ struct MeshHandle
 	}
 };
 
+struct ShaderHandle
+{
+	size_t handle = Handle::Invalid;
+
+	bool IsValid() const
+	{
+		return handle != Handle::Invalid;
+	}
+
+	inline bool operator==(const ShaderHandle& other) const noexcept
+	{
+		return handle == other.handle;
+	}
+
+	inline bool operator!=(const ShaderHandle& other) const noexcept
+	{
+		return handle != other.handle;
+	}
+};
+
 namespace std
 {
 	template<>
@@ -60,6 +80,15 @@ namespace std
 	struct hash<MeshHandle>
 	{
 		size_t operator()(const MeshHandle& h) const noexcept
+		{
+			return h.handle;
+		}
+	};
+
+	template<>
+	struct hash<ShaderHandle>
+	{
+		size_t operator()(const ShaderHandle& h) const noexcept
 		{
 			return h.handle;
 		}

@@ -48,11 +48,13 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
 {
     currentBackgroundEffect = 0;
     InitVulkan();
-    m_swapchain = { m_device, m_physicalDevice, m_surface, m_allocator };
     CreateSwapchain();
     offscreen_Texture = Object::Create<Texture>("offscreen_texture");
-    auto[handle, textureData] = CreateTexture(m_swapchain.GetRenderTargetImage().imageExtent, VK_FORMAT_R32G32B32A32_SFLOAT,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+    auto[handle, textureData] = CreateTexture(m_swapchain.GetRenderTargetImage().imageExtent, 
+        VK_FORMAT_R32G32B32A32_SFLOAT,
+        VK_IMAGE_USAGE_SAMPLED_BIT | 
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | 
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
     offscreen_Texture->handle = handle;
 
     m_shadowMap = Object::Create<Texture>("shadow_map");
@@ -77,6 +79,7 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
         VK_IMAGE_USAGE_TRANSFER_DST_BIT);
     m_ShadowTexture_debug->handle = smd_handle;
     smd_textureData.CreateSampler(VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+
     InitCommands();
     InitSyncStructures();
     InitDescriptors();
@@ -106,7 +109,7 @@ gns::rendering::Device::~Device()
 {
     vkDeviceWaitIdle(m_device);
     vkDestroyDescriptorSetLayout(m_device, m_perFrameDescriptorLayout, nullptr);
-
+    VulkanSampler::Clear(m_device);
     for (size_t i = 0; i < m_imageCount; i++)
     {
         vkDestroyCommandPool(m_device, m_frames[i].commandPool, nullptr);
@@ -269,15 +272,15 @@ bool gns::rendering::Device::InitVulkan()
 #ifdef VK_LOG
     auto inst_ret = builder.request_validation_layers(true).set_debug_callback(VulkanDebugCallback)
         .set_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-        .set_app_name("Awesome Vulkan Application")
-        .set_engine_name("Excellent Game Engine")
+        .set_app_name("Gns App")
+        .set_engine_name("Genesis Engine")
         .require_api_version(1, 3, 0)
         .set_app_version(0, 0, 1)
         .build();
 #else
-    auto inst_ret = builder.request_validation_layers(false).set_app_name("Awesome Vulkan Application")
-        .set_engine_name("Excellent Game Engine")
-        .require_api_version(1, 2, 0)
+    auto inst_ret = builder.request_validation_layers(false).set_app_name("Gns App")
+        .set_engine_name("Genesis Engine")
+        .require_api_version(1, 3, 0)
         .set_app_version(0, 0, 1)
         .build();
 #endif
@@ -384,6 +387,7 @@ bool gns::rendering::Device::InitVulkan()
 
 void gns::rendering::Device::CreateSwapchain()
 {
+    m_swapchain = { m_device, m_physicalDevice, m_surface, m_allocator };
     m_swapchain.Create(m_screen);
 }
 
@@ -402,7 +406,7 @@ void gns::rendering::Device::InitDescriptors()
     {
         { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
     };
-    m_globalDescriptorAllocator.InitPool(m_device, 10, sizes);
+    m_globalDescriptorAllocator.InitPool(m_device, 100, sizes);
     m_swapchain.AllocateDescriptorSet(m_globalDescriptorAllocator);
 
 
@@ -531,9 +535,27 @@ void gns::rendering::Device::UpdateDirLightBuffer(void* data, size_t size)
     void* dataPtr = (m_dirLightStorageBuffer.allocation->GetMappedData());
     memcpy(dataPtr, data, size);
 }
+
 #pragma endregion
 
 #pragma region Drawing
+void gns::rendering::Device::PrepareImages(VkCommandBuffer cmd)
+{
+    utils::TransitionImage(cmd, m_swapchain.GetRenderTargetImage().image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    utils::TransitionImage(cmd, m_swapchain.GetDepthImage().image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+}
+void gns::rendering::Device::FinishImages(VkCommandBuffer cmd, uint32_t imageIndex)
+{
+    utils::TransitionImage(cmd, m_swapchain.GetRenderTargetImage().image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    utils::TransitionImage(cmd, m_swapchain.GetImage(imageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    utils::CopyImageToImage(cmd, m_swapchain.GetRenderTargetImage().image, m_swapchain.GetImage(imageIndex), drawExtent, m_swapchain.GetExtent());
+    VulkanTexture& vkTexture = GetTexture(offscreen_Texture->handle);
+    utils::TransitionImage(cmd, vkTexture.image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    utils::CopyImageToImage(cmd, m_swapchain.GetRenderTargetImage().image, vkTexture.image.image, drawExtent, drawExtent);
+    utils::TransitionImage(cmd, vkTexture.image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+}
 
 bool gns::rendering::Device::BeginDraw(uint32_t& swapchainImageIndex)
 {
@@ -689,43 +711,16 @@ void gns::rendering::Device::Draw(
     VkCommandBuffer cmd;
     StartFrame(cmd);
 
-    VkClearColorValue clear = { 0,0,0 };
-    VkImageSubresourceRange subResourceRange = {};
-    subResourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    subResourceRange.baseMipLevel = 0;
-    subResourceRange.levelCount = 1;
-    subResourceRange.baseArrayLayer = 0;
-    subResourceRange.layerCount = 1;
-
-	//vkCmdClearColorImage(cmd, m_images[swapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, &clear, 1, &subResourceRange);
-
     DrawBackground(cmd);
 
-    utils::TransitionImage(cmd, m_swapchain.GetRenderTargetImage().image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-	utils::TransitionImage(cmd, m_swapchain.GetDepthImage().image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+    PrepareImages(cmd);
     SetDrawStructs(cmd, m_shadowMapSize, m_shadowMapSize);
     DrawShadowMap(cmd, objects, indices, meshes);
+
 	SetDrawStructs(cmd, m_swapchain.GetExtent().width, m_swapchain.GetExtent().height);
-
-	VkRenderingAttachmentInfo colorAttachment =
-        utils::AttachmentInfo(m_swapchain.GetRenderTargetImage().imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-    VkRenderingAttachmentInfo depthAttachment =
-        utils::DepthAttachmentInfo(m_swapchain.GetDepthImage().imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-    VkRenderingInfo renderInfo = utils::RenderingInfo(m_swapchain.GetExtent(), &colorAttachment, &depthAttachment);
-    vkCmdBeginRendering(cmd, &renderInfo);
-
     DrawGeometry(cmd, objects, indices, meshes, materials);
-    vkCmdEndRendering(cmd);
 
-    utils::TransitionImage(cmd, m_swapchain.GetRenderTargetImage().image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-	utils::TransitionImage(cmd, m_swapchain.GetImage(swapchainImageIndex), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-    utils::CopyImageToImage(cmd, m_swapchain.GetRenderTargetImage().image, m_swapchain.GetImage(swapchainImageIndex), drawExtent, m_swapchain.GetExtent());
-    VulkanTexture& vkTexture = GetTexture(offscreen_Texture->handle);
-    utils::TransitionImage(cmd, vkTexture.image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    utils::CopyImageToImage(cmd, m_swapchain.GetRenderTargetImage().image, vkTexture.image.image, drawExtent, drawExtent);
-    utils::TransitionImage(cmd, vkTexture.image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
+    FinishImages(cmd, swapchainImageIndex);
 	DrawImGui(cmd, m_swapchain.GetImageView(swapchainImageIndex));
     utils::TransitionImage(cmd, m_swapchain.GetImage(swapchainImageIndex), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
@@ -741,6 +736,14 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
 											std::vector<Mesh*>& meshes,
 											std::vector<Material*>& materials)
 {
+
+    VkRenderingAttachmentInfo colorAttachment =
+        utils::AttachmentInfo(m_swapchain.GetRenderTargetImage().imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingAttachmentInfo depthAttachment =
+        utils::DepthAttachmentInfo(m_swapchain.GetDepthImage().imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo renderInfo = utils::RenderingInfo(m_swapchain.GetExtent(), &colorAttachment, &depthAttachment);
+    vkCmdBeginRendering(cmd, &renderInfo);
+
     m_currentBoundShader = nullptr;
     m_currentMaterial = nullptr;
     
@@ -783,6 +786,7 @@ void gns::rendering::Device::DrawGeometry(VkCommandBuffer cmd,
         vkCmdDrawIndexed(cmd, vkMesh.indexBufferRange.count,
             1, vkMesh.indexBufferRange.startIndex, 0, objectIndex);
     }
+    vkCmdEndRendering(cmd);
 }
 
 

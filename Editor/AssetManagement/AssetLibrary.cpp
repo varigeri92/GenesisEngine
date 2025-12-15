@@ -1,10 +1,10 @@
 #include "AssetLibrary.h"
 #include <filesystem>
+#include "GenesisFileSystem.h"
+#define YAML_CPP_STATIC_DEFINE
 #include "yaml-cpp/yaml.h"
-
 #include "AssetImporter.h"
 #include "../PathManager.h"
-#include "../../Engine/Utils/FileSystemUtils.h"
 
 namespace fs = std::filesystem;
 std::unordered_map<gns::guid, gns::AssetMetadata> gns::editor::assets::AssetLibrary::assetDatabase = {};

@@ -216,6 +216,9 @@ namespace gns::rendering
 		void UpdateSpotLightBuffer(void* data, size_t size);
 		void UpdateDirLightBuffer(void* data, size_t size);
 
+		void PrepareImages(VkCommandBuffer cmd);
+		void FinishImages(VkCommandBuffer cmd, uint32_t imageIndex);
+
 		static void ImmediateSubmit(VkDevice device, VkQueue queue, std::function<void(VkCommandBuffer cmd)>&& function);
 		void DrawImGui(VkCommandBuffer cmd, VkImageView targetImageView);
 

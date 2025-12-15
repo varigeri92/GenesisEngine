@@ -130,8 +130,10 @@ namespace gns::rendering::utils
 	VkRenderingAttachmentInfo DepthAttachmentInfo(VkImageView image_view, VkImageLayout vk_image_layout);
 }
 
-
+#ifdef _DEBUG
 #define VK_LOG
+#endif
+
 #ifdef VK_LOG
 
 #define LOG_VK_VERBOSE(msg) \
@@ -160,7 +162,7 @@ namespace gns::rendering::utils
 #define LOG_VK_INFO(msg)
 #define LOG_VK_WARNING(msg)
 #define LOG_VK_ERROR(msg)
-#define _VK_CHECK(result, msg)
+#define _VK_CHECK(result, msg) result
 
 #endif
 

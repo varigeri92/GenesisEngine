@@ -1,16 +1,11 @@
 ﻿#include "ContentBrowser.h"
-
-#include <filesystem>
-#include <iostream>
-
+#include "Genesis.h"
+#include "GenesisFileSystem.h"
+#include "GenesisRendering.h"
+#include "GenesisSystems.h"
 #include "DockSpaceWindow.h"
-#include "../../PathManager.h"
-#include "../../../Engine/Utils/FileSystemUtils.h"
 #include "../../AssetManagement/AssetImporter.h"
-#include "../../Engine/Utils/Logger.h"
-#include "../../Engine/Rendering/RenderSystem.h"
-#include "../../Engine/ECS/SystemsManager.h"
-#include "../../Engine/Rendering/Objects/Texture.h"
+#include "../../PathManager.h"
 #include "../EditorGuiUtils/SelectionHandler.h"
 
 
@@ -135,8 +130,8 @@ void gns::editor::gui::ContentBrowser::InitWindow()
 	currentSelectedEntry = &rootEntry;
 	render_system = SystemsManager::GetSystem<RenderSystem>();
 	texture = render_system->CreateTexture(PathManager::FromResourcesRelative(R"(EditorResources\Icons.png)"));
-	render_system->CreateTextureDescriptor(texture);
-	render_system->UpdateTextureDescriptor(texture);
+	//render_system->CreateTextureDescriptor(texture);
+	//render_system->UpdateTextureDescriptor(texture);
 }
 
 bool gns::editor::gui::ContentBrowser::OnWindowBegin()

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../../Engine/GUI/GuiWindow.h"
+#include "GenesisGui.h"
 #include "../EditorGuiUtils/SelectionHandler.h"
 
 namespace gns::editor::gui

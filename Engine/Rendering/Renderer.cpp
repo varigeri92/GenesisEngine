@@ -108,7 +108,6 @@ void gns::rendering::Renderer::DestroyMesh(MeshHandle handle)
 VkDescriptorPool imguiPool;
 void gns::rendering::Renderer::InitImGui()
 {
-
     VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
         { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
         { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
@@ -466,6 +465,12 @@ void gns::rendering::Renderer::UpdateTextureDescriptorSet(Texture* texture)
     writer.WriteImage(0, vkTexture.image.imageView, vkTexture.sampler,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     writer.UpdateSet(m_device->GetDevice(), vkTexture.descriptorSet);
+}
+
+void gns::rendering::Renderer::CreateSampler(Texture* texture)
+{
+    VulkanTexture& vkTexture = m_device->GetTexture(texture->handle);
+    vkTexture.CreateDefaultSampler();
 }
 
 void gns::rendering::Renderer::WaitForGPUIddle()

@@ -126,7 +126,7 @@ void gns::rendering::DescriptorWriter::WriteImage(int binding, VkImageView image
 	VkWriteDescriptorSet write = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 
 	write.dstBinding = binding;
-	write.dstSet = VK_NULL_HANDLE; //left empty for now until we need to write it
+	write.dstSet = VK_NULL_HANDLE;
 	write.descriptorCount = 1;
 	write.descriptorType = type;
 	write.pImageInfo = &info;
@@ -147,7 +147,7 @@ void gns::rendering::DescriptorWriter::WriteBuffer(int binding, VkBuffer buffer,
 	VkWriteDescriptorSet write = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 
 	write.dstBinding = binding;
-	write.dstSet = VK_NULL_HANDLE; //left empty for now until we need to write it
+	write.dstSet = VK_NULL_HANDLE;
 	write.descriptorCount = 1;
 	write.descriptorType = type;
 	write.pBufferInfo = &info;
@@ -167,7 +167,6 @@ void gns::rendering::DescriptorWriter::UpdateSet(VkDevice device, VkDescriptorSe
 	for (VkWriteDescriptorSet& write : writes) {
 		write.dstSet = set;
 	}
-
 	vkUpdateDescriptorSets(device, (uint32_t)writes.size(), writes.data(), 0, nullptr);
 }
 #pragma region DescriptorLayoutBuilders:
@@ -238,6 +237,7 @@ void gns::rendering::DescriptorAllocator::DestroyPool(VkDevice device)
 
 VkDescriptorSet gns::rendering::DescriptorAllocator::Allocate(VkDevice device, VkDescriptorSetLayout layout)
 {
+	LOG_INFO("AllocateDescriptorSet!");
 	VkDescriptorSetAllocateInfo allocInfo = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 	allocInfo.pNext = nullptr;
 	allocInfo.descriptorPool = pool;

@@ -234,10 +234,29 @@ void gns::rendering::VulkanImage::CreateImage(void* data, VkExtent3D size, VkFor
 		});
 }
 
+std::unordered_map<gns::rendering::VulkanSampler::SamplerID, VkSampler> gns::rendering::VulkanSampler::sSamplerCache = {};
+
+gns::rendering::VulkanSampler::SamplerID gns::rendering::VulkanSampler::GetSamplerID(VkFilter filter, VkSamplerAddressMode mode)
+{
+	return filter << 32 | mode;
+}
+
+VkSampler gns::rendering::VulkanSampler::GetSampler(gns::rendering::VulkanSampler::SamplerID id)
+{
+	return sSamplerCache[id];
+}
+
+void gns::rendering::VulkanSampler::Clear(VkDevice device)
+{
+	for (const auto element : sSamplerCache)
+	{
+		vkDestroySampler(device, element.second, nullptr);
+	}
+}
+
 
 void gns::rendering::VulkanImage::Destroy()
 {
-	LOG_INFO("Destroying Vulkan Image!");
 	if(imageView != VK_NULL_HANDLE)
 		vkDestroyImageView(vkDevice, imageView, nullptr);
 
@@ -279,8 +298,18 @@ void gns::rendering::VulkanTexture::CreateSampler(VkFilter filter, VkSamplerAddr
 {
 	filterMode = filter;
 	samplerMode = mode;
+
+	VulkanSampler::SamplerID id = VulkanSampler::GetSamplerID(filter, mode);
+	if (VulkanSampler::sSamplerCache.contains(id))
+	{
+		LOG_INFO("returning Existing Sampler");
+		sampler = VulkanSampler::GetSampler(id);
+		return;
+	}
+	LOG_INFO("Create new sampler");
 	VkSamplerCreateInfo samplerInfo = utils::SamplerCreateInfo(filter, mode);
 	vkCreateSampler(image.vkDevice, &samplerInfo, nullptr, &sampler);
+	VulkanSampler::sSamplerCache.emplace(id, sampler);
 }
 
 void gns::rendering::VulkanTexture::CreateDefaultSampler()
@@ -290,10 +319,6 @@ void gns::rendering::VulkanTexture::CreateDefaultSampler()
 
 void gns::rendering::VulkanTexture::Destroy()
 {
-
-	if (sampler != VK_NULL_HANDLE)
-		vkDestroySampler(image.vkDevice, sampler, nullptr);
-
 	sampler = VK_NULL_HANDLE;
 	descriptorSet = VK_NULL_HANDLE;
 	setLayout = VK_NULL_HANDLE;

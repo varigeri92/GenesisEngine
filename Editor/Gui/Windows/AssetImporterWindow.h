@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../../../Engine/GUI/GuiWindow.h"
+#include "GenesisGui.h"
 
 class AssetImporterWindow : public gns::gui::GuiWindow
 {

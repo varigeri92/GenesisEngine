@@ -1,7 +1,6 @@
 ﻿#pragma once
+#include "GenesisGui.h"
 #include <unordered_map>
-
-#include "../../Engine/GUI/GuiWindow.h"
 
 class DockSpaceWindow : public  gns::gui::GuiWindow
 {

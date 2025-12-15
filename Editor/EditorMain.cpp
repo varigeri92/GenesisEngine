@@ -179,18 +179,18 @@ int main(int argc, char* argv[])
 	gns::Engine engine;
 	engine.InitEngine(PROJECT_NAME, PathManager::AssetsPath, PathManager::ResourcesPath);
 	engine.OnEngineStart([&](){
-		LOG_INFO("ON EngineStartCallback");
 		config_style();
 		//register systems:
 		gns::SystemsManager::RegisterSystem<gns::editor::scene::EditorCamera>();
+
 		//create GuiWindows:
 		gns::GuiWindowDrawer::CreateGUIWindow<DockSpaceWindow>();
+		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::LightingSettings>();
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::ContentBrowser>();
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::InspectorWindow>();
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::HierarchyView>();
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::SceneView>();
 		gns::GuiWindowDrawer::CreateGUIWindow<ShadowDebuggerWindow>();
-		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::LightingSettings>();
 
 	});
 	engine.Run();
