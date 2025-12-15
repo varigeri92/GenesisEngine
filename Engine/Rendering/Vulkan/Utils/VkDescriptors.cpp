@@ -237,7 +237,6 @@ void gns::rendering::DescriptorAllocator::DestroyPool(VkDevice device)
 
 VkDescriptorSet gns::rendering::DescriptorAllocator::Allocate(VkDevice device, VkDescriptorSetLayout layout)
 {
-	LOG_INFO("AllocateDescriptorSet!");
 	VkDescriptorSetAllocateInfo allocInfo = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 	allocInfo.pNext = nullptr;
 	allocInfo.descriptorPool = pool;

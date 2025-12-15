@@ -156,6 +156,11 @@ gns::rendering::LightingSettings* gns::RenderSystem::GetLightningSettings()
 }
 #pragma endregion
 
+void gns::RenderSystem::DisposeShader(ShaderHandle handle)
+{
+    m_renderer->DisposeShader(handle);
+}
+
 void gns::RenderSystem::InitSystem()
 {
     m_renderer = new gns::rendering::Renderer(m_renderScreen);

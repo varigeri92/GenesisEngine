@@ -1,6 +1,8 @@
 ﻿#include "gnspch.h"
 #include "Shader.h"
 
+#include "RenderSystem.h"
+
 
 gns::rendering::Shader::Shader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath, const std::string& name) :
 	Object(name),
@@ -10,6 +12,7 @@ gns::rendering::Shader::Shader(const std::string& vertexShaderPath, const std::s
 
 void gns::rendering::Shader::Dispose()
 {
-	//shader.Destroy();
+	RenderSystem* renderSystem = SystemsManager::GetSystem<RenderSystem>();
+	renderSystem->DisposeShader(handle);
 	Object::Dispose();
 }

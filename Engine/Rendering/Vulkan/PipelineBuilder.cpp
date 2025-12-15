@@ -86,17 +86,18 @@ namespace gns::rendering
 			shader.fragmentShaderPath += ".spv";
 
 		PathHelper::FromResourcesRelative(shader.fragmentShaderPath);
-		if (!utils::LoadShaderModule(PathHelper::FromResourcesRelative(shader.fragmentShaderPath).c_str(), m_device->GetDevice(), &fragmentModule)) {
-			LOG_ERROR("Error when building the triangle fragment shader module");
+		if (!utils::LoadShaderModule(
+			PathHelper::FromResourcesRelative(shader.fragmentShaderPath).c_str(), m_device->GetDevice(), &fragmentModule)) {
+			LOG_ERROR("Can't build fragment shader module");
 		}
 		
 		if (!fileUtils::HasFileExtension(shader.vertexShaderPath, "spv"))
 			shader.vertexShaderPath += ".spv";
 
-		if (!utils::LoadShaderModule(PathHelper::FromResourcesRelative(shader.vertexShaderPath).c_str(), m_device->GetDevice(), &vertexModule)) {
-			LOG_ERROR("Error when building the triangle vertex shader module");
+		if (!utils::LoadShaderModule(
+			PathHelper::FromResourcesRelative(shader.vertexShaderPath).c_str(), m_device->GetDevice(), &vertexModule)) {
+			LOG_ERROR("Can't build vertex shader module");
 		}
-
 		SetShaders(vertexModule, fragmentModule);
 	}
 

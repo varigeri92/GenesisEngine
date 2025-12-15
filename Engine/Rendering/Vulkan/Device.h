@@ -92,6 +92,7 @@ namespace gns::rendering
 		Device(Screen* screen);
 		~Device();
 		void SetShadowShader(Shader* shader);
+		void DisposeShader(ShaderHandle handle);
 		Device(Device& other) = delete;
 		Device operator=(Device& other) = delete;
 

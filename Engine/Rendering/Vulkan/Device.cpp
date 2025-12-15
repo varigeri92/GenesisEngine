@@ -18,7 +18,6 @@
 #include "../ECS/Component.h"
 #include "../ECS/SystemsManager.h"
 #include <algorithm>
-
 #include "../RenderSystem.h"
 #include "../../Utils/PathHelper.h"
 #include "../../Window/Screen.h"
@@ -130,6 +129,12 @@ gns::rendering::Device::~Device()
 void gns::rendering::Device::SetShadowShader(Shader* shader)
 {
     m_shadowShader = shader;
+}
+
+void gns::rendering::Device::DisposeShader(ShaderHandle handle)
+{
+    VulkanShader& vkShader = GetShader(handle);
+    vkShader.Destroy();
 }
 
 #pragma region Device_Initalization_Functions

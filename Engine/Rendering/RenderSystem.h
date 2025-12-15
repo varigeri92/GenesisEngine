@@ -86,7 +86,8 @@ namespace gns
 		GNS_API void UploadMesh(rendering::Mesh* mesh, uint32_t startIndex, uint32_t count);
 		GNS_API ImTextureID GetImGuiTexture(TextureHandle handle);
 		GNS_API rendering::LightingSettings* GetLightningSettings();
-		rendering::Renderer* GetRenderer() const { return m_renderer; };
+		rendering::Renderer* GetRenderer() const { return m_renderer; }
+		void DisposeShader(ShaderHandle handle);;
 		void InitSystem() override;
 		void UpdateSystem(const float deltaTime) override;
 		void FixedUpdate(const float fixedDeltaTime) override;
