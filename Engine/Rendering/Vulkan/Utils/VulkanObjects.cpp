@@ -205,7 +205,14 @@ void gns::rendering::VulkanImage::CreateImage(VkExtent3D size, VkFormat format, 
 void gns::rendering::VulkanImage::CreateImage(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage,
                                               bool mipmapped)
 {
-	const size_t data_size = size.depth * size.width * size.height * 4;
+
+	size_t data_size = size.depth * size.width * size.height * 4;
+	if(format == VK_FORMAT_R32G32B32A32_SFLOAT)
+	{
+		data_size = size.depth * size.width * size.height * 4 * sizeof(float);
+	}
+	
+
 	VulkanBuffer uploadBuffer = VulkanBuffer::Create(allocator, data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 	memcpy(uploadBuffer.info.pMappedData, data, data_size);
 

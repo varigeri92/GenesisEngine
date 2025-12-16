@@ -74,6 +74,7 @@ namespace gns::rendering
 		void DestroyTexture(TextureHandle handle);
 		void DestroyMesh(MeshHandle handle);
 		void DisposeShader(ShaderHandle handle);
+		void SetbgTexture(TextureHandle handle);
 
 	private:
 		Screen* m_screen;

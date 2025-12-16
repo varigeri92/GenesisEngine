@@ -1,32 +1,70 @@
 #version 460
 
 layout (local_size_x = 16, local_size_y = 16) in;
+// Output storage image (same as you have)
+layout(rgba16f, set = 0, binding = 0) uniform writeonly image2D outImage;
 
-layout(rgba16f,set = 0, binding = 0) uniform image2D image;
+// Input HDR equirect texture (NEW)
+layout(set = 0, binding = 1) uniform sampler2D uHdri;
 
-//push constants block
-layout( push_constant ) uniform constants
+layout(push_constant) uniform Push
 {
- vec4 data1;
- vec4 data2;
- vec4 data3;
- vec4 data4;
-} PushConstants;
+    mat4 invProj;
+    mat4 invViewRot;
+    vec4 color;
+    float yaw;
+} pc;
+const float PI = 3.14159265359;
 
-void main() 
+vec3 rotateY(vec3 v, float a)
 {
-    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
-
-	ivec2 size = imageSize(image);
-
-    vec4 topColor = PushConstants.data1;
-    vec4 bottomColor = PushConstants.data2;
-
-    if(texelCoord.x < size.x && texelCoord.y < size.y)
-    {
-        float blend = float(texelCoord.y)/(size.y); 
-    
-        imageStore(image, texelCoord, mix(topColor,bottomColor, blend));
-    }
+    float s = sin(a), c = cos(a);
+    return vec3(
+        c * v.x + s * v.z,
+        v.y,
+       -s * v.x + c * v.z
+    );
 }
+
+// dir -> equirect uv
+vec2 dirToEquirectUV(vec3 d)
+{
+    d = normalize(d);
+    float u = atan(d.z, d.x) / (2.0 * PI) + 0.5;
+    float v = asin(clamp(d.y, -1.0, 1.0)) / PI + 0.5;
+    return vec2(u, v);
+}
+
+void main()
+{
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(outImage);
+    if (p.x >= size.x || p.y >= size.y) return;
+
+    // pixel center -> normalized [0..1]
+    vec2 uv = (vec2(p) + 0.5) / vec2(size);
+
+    // Vulkan screen to NDC: x:[-1..1], y:[-1..1]
+    // Depending on your pipeline you may need to flip Y. Try toggling the uv.y flip if it looks upside down.
+    vec2 ndc = vec2(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0);
+
+    // Construct a view-space direction from NDC using invProj.
+    // z=1 points forward; w=1 for a position in clip space.
+    vec4 clip = vec4(ndc, 1.0, 1.0);
+    vec4 view = pc.invProj * clip;
+    vec3 viewDir = normalize(view.xyz / view.w);
+
+    // Rotate into world (ignoring camera translation)
+    vec3 worldDir = normalize((pc.invViewRot * vec4(viewDir, 0.0)).xyz);
+
+    // Optional yaw rotation to spin the HDRI
+    worldDir = rotateY(worldDir, pc.yaw);
+
+    vec2 envUV = dirToEquirectUV(worldDir);
+    vec3 hdr = texture(uHdri, envUV).rgb;
+
+    vec4 outColor = vec4((hdr * pc.color.xyz) * pc.color.a, 1.0);
+    imageStore(outImage, p, outColor);
+}
+
 

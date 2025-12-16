@@ -23,6 +23,11 @@ void gns::editor::entity::EditorEntityManager::CreateNewEntity(PreconfiguredEnti
 		Entity entity = Entity::CreateEntity("new Spot Light");
 		CreateSpotLight(entity);
 	}
+	case PreconfiguredEntityType::SkyLight:
+	{
+		Entity entity = Entity::CreateEntity("new Sky Light");
+		CreateSkyLight(entity);
+	}
 	break;
 	default: Entity::CreateEntity("new Entity");
 		break;
@@ -47,5 +52,12 @@ void gns::editor::entity::EditorEntityManager::CreateSpotLight(Entity& entity)
 	entity.AddComponet<gns::rendering::LightComponent>();
 	entity.AddComponet<gns::rendering::SpotLightComponent>();
 	entity.AddComponet<gns::rendering::ColorComponent>();
+}
+
+void gns::editor::entity::EditorEntityManager::CreateSkyLight(Entity& entity)
+{
+	entity.AddComponet<gns::rendering::LightComponent>();
+	entity.AddComponet<gns::rendering::ColorComponent>();
+	entity.AddComponet<gns::rendering::SkyComponent>();
 }
 

@@ -23,7 +23,7 @@
 #include "../../Window/Screen.h"
 #include "../../Window/WindowSystem.h"
 
-
+bool bg_update = true;
 gns::rendering::ImmeduateSubmitStruct gns::rendering::Device::sImmediateSubmitStruct = {};
 
 #pragma region DeletionQueue
@@ -101,6 +101,9 @@ gns::rendering::Device::Device(Screen* screen) : m_screen(screen), m_imageCount(
     m_dirLightStorageBuffer = VulkanBuffer::Create(m_allocator, sizeof(DirectionalLight) * DEFAULT_STORAGE_BUFFER_OBJECT_COUNT,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
+    m_skyLightStorageBuffer = VulkanBuffer::Create(m_allocator, sizeof(SkyLight),
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
 }
 
 
@@ -159,20 +162,13 @@ void gns::rendering::Device::InitBackgroundPipelines()
     computeLayout.pPushConstantRanges = &pushConstant;
     computeLayout.pushConstantRangeCount = 1;
 
-    _VK_CHECK(vkCreatePipelineLayout(m_device, &computeLayout, nullptr, &m_gradientPipelineLayout),"Failed To create Pipeline Layout");
+    _VK_CHECK(vkCreatePipelineLayout(m_device, &computeLayout, nullptr, &backgroundEffect.layout),"Failed To create Pipeline Layout");
 
     const std::string gradient_ShaderPath = PathHelper::FromResourcesRelative(R"(Shaders\gradient_color.comp.spv)");
     VkShaderModule gradientShader;
     if (!utils::LoadShaderModule(gradient_ShaderPath.c_str(), m_device, &gradientShader)) {
         LOG_ERROR("Failed To load Shader: " + gradient_ShaderPath);
     }
-
-    const std::string sky_ShaderPath = PathHelper::FromResourcesRelative("R(Shaders\sky.comp.spv)");
-    VkShaderModule skyShader;
-    if (!utils::LoadShaderModule(gradient_ShaderPath.c_str(), m_device, &skyShader)) {
-        LOG_ERROR("Failed To load Shader: " + sky_ShaderPath);
-    }
-
 
     VkPipelineShaderStageCreateInfo stageinfo{};
     stageinfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -184,98 +180,22 @@ void gns::rendering::Device::InitBackgroundPipelines()
     VkComputePipelineCreateInfo computePipelineCreateInfo{};
     computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     computePipelineCreateInfo.pNext = nullptr;
-    computePipelineCreateInfo.layout = m_gradientPipelineLayout;
+    computePipelineCreateInfo.layout = backgroundEffect.layout;
     computePipelineCreateInfo.stage = stageinfo;
 
+    backgroundEffect.name = "gradient";
+    backgroundEffect.data = {};
 
-    ComputeEffect gradient;
-    gradient.layout = m_gradientPipelineLayout;
-    gradient.name = "gradient";
-    gradient.data = {};
-    gradient.data.data1 = glm::vec4(0.588f, 0.964f, 1, 1);
-    gradient.data.data2 = glm::vec4(0.436f, 0.436f, 0.436f, 1);
-
-    _VK_CHECK(vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &gradient.pipeline), 
+    _VK_CHECK(vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &backgroundEffect.pipeline),
         "Failed to create Compute Pipeline.");
 
-    computePipelineCreateInfo.stage.module = skyShader;
-
-    ComputeEffect sky;
-    sky.layout = m_gradientPipelineLayout;
-    sky.name = "sky";
-    sky.data = {};
-    //default sky parameters
-    sky.data.data1 = glm::vec4(0.1, 0.2, 0.4, 1);
-    sky.data.data1 = glm::vec4(0, 0, 0, 1);
-
-    _VK_CHECK(vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &sky.pipeline),
-        "Failed to create Compute Pipeline");
-
-    backgroundEffects.push_back(gradient);
-    backgroundEffects.push_back(sky);
-
-
     vkDestroyShaderModule(m_device, gradientShader, nullptr);
-    vkDestroyShaderModule(m_device, skyShader, nullptr);
 
     m_deletionQueue.Push([&]() {
-        vkDestroyPipelineLayout(m_device, m_gradientPipelineLayout, nullptr);
-        vkDestroyPipeline(m_device, backgroundEffects[0].pipeline, nullptr);
-        vkDestroyPipeline(m_device, backgroundEffects[1].pipeline, nullptr);
+        vkDestroyPipelineLayout(m_device, backgroundEffect.layout, nullptr);
+        vkDestroyPipeline(m_device, backgroundEffect.pipeline, nullptr);
         });
 }
-
-/*
-void gns::rendering::Device::CreatePipeline(Shader& shader)
-{
-    LOG_INFO("CreatingPipeline for Shader:" + std::to_string(shader.m_guid));
-    shader.shader.m_device = m_device;
-    VkPushConstantRange bufferRange{};
-    bufferRange.offset = 0;
-    bufferRange.size = sizeof(PushConstants);
-    bufferRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-    {
-        DescriptorLayoutBuilder builder;
-        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-        builder.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        builder.AddBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        builder.AddBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        builder.AddBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        builder.AddBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        builder.AddBinding(6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        shader.shader.m_descriptorSetLayout = builder.Build(m_device, VK_SHADER_STAGE_FRAGMENT_BIT);
-    }
-
-    VkDescriptorSetLayout layouts[] = { shader.shader.m_descriptorSetLayout, m_perFrameDescriptorLayout };
-
-    VkPipelineLayoutCreateInfo pipeline_layout_info = utils::PipelineLayoutCreateInfo();
-    pipeline_layout_info.pPushConstantRanges = &bufferRange;
-    pipeline_layout_info.pushConstantRangeCount = 1;
-    pipeline_layout_info.pSetLayouts = layouts;
-    pipeline_layout_info.setLayoutCount = 2;
-
-    _VK_CHECK(vkCreatePipelineLayout(m_device, &pipeline_layout_info, nullptr, &shader.shader.m_pipelineLayout),
-        "Failed to crete pipeline Layout.");
-    {
-        PipelineBuilder pipelineBuilder(this);
-        pipelineBuilder.m_pipelineLayout = shader.shader.m_pipelineLayout;
-        pipelineBuilder.SetShaders(shader);
-        pipelineBuilder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-        pipelineBuilder.SetPolygonMode(VK_POLYGON_MODE_FILL);
-
-    	const VkCullModeFlags cullMode = shader.front ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_FRONT_BIT;
-
-        pipelineBuilder.SetCullMode(cullMode, VK_FRONT_FACE_COUNTER_CLOCKWISE);
-        pipelineBuilder.SetMultisampling(false);
-        pipelineBuilder.SetBlending(PipelineBuilder::BlendingMode::disabled);
-        pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_LESS_OR_EQUAL);
-        pipelineBuilder.SetColorAttachmentFormat(m_swapchain.GetRenderTargetImage().imageFormat);
-        pipelineBuilder.SetDepthFormat(m_swapchain.GetDepthImage().imageFormat);
-        shader.shader.m_pipeline = pipelineBuilder.BuildPipeline(m_device);
-    }
-}
- */
 
 void gns::rendering::Device::CreatePipeline(ShaderHandle handle, Shader& shaderObject)
 {
@@ -597,6 +517,17 @@ void gns::rendering::Device::UpdateDirLightBuffer(void* data, size_t size)
     memcpy(dataPtr, data, size);
 }
 
+void gns::rendering::Device::UpdateSkyLightBuffer(
+    void* data, size_t size, glm::mat4 invProj, glm::mat4 invViewRot, glm::vec4 color, float yaw)
+{
+    backgroundEffect.data.imvProj = invProj;
+    backgroundEffect.data.imvView = invViewRot;
+    backgroundEffect.data.color = color;
+    backgroundEffect.data.yaw = yaw;
+    void* dataPtr = (m_skyLightStorageBuffer.allocation->GetMappedData());
+    memcpy(dataPtr, data, size);
+}
+
 #pragma endregion
 
 #pragma region Drawing
@@ -653,12 +584,22 @@ void gns::rendering::Device::StartFrame(VkCommandBuffer& cmd)
 
 void gns::rendering::Device::DrawBackground(VkCommandBuffer cmd)
 {
-    ComputeEffect& effect = backgroundEffects[currentBackgroundEffect];
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, effect.pipeline);
+    if(backgroundEffect.backgroundTexture != nullptr && bg_update)
+    {
+        LOG_INFO("Update BG texture");
+        bg_update = false;
+        VulkanTexture& vkTex = *backgroundEffect.backgroundTexture;
+        DescriptorWriter image_writer;
+        image_writer.WriteImage(
+            1, vkTex.image.imageView, vkTex.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        image_writer.UpdateSet(m_device, *m_swapchain.GetDescriptorSet_ptr());
+    }
+
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, backgroundEffect.pipeline);
     vkCmdBindDescriptorSets(cmd, 
-        VK_PIPELINE_BIND_POINT_COMPUTE, m_gradientPipelineLayout, 0, 1, 
+        VK_PIPELINE_BIND_POINT_COMPUTE, backgroundEffect.layout, 0, 1,
         m_swapchain.GetDescriptorSet_ptr(), 0, nullptr);
-    vkCmdPushConstants(cmd, m_gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &effect.data);
+    vkCmdPushConstants(cmd, backgroundEffect.layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(ComputePushConstants), &backgroundEffect.data);
     vkCmdDispatch(cmd, 
         std::ceil(static_cast<float>(drawExtent.width) / 16.0f), 
         std::ceil(static_cast<float>(drawExtent.height) / 16.0f), 1);
@@ -1058,6 +999,13 @@ gns::rendering::VulkanMesh& gns::rendering::Device::GetMesh(MeshHandle handle)
     else {
         return resources.meshes[{Handle::Invalid}];
     }
+}
+
+void gns::rendering::Device::SetBackgroundTexture(TextureHandle handle)
+{
+    bg_update = true;
+    backgroundEffect.backgroundTexture = &GetTexture(handle);
+    LOG_INFO("BG Changed!");
 }
 
 MeshHandle gns::rendering::Device::CreateMesh()

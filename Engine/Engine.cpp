@@ -36,7 +36,7 @@ namespace gns
 		REGISTER_COMPONENT(rendering::SpotLightComponent);
 		REGISTER_COMPONENT(rendering::ColorComponent);
 		REGISTER_COMPONENT(rendering::LightComponent);
-
+		REGISTER_COMPONENT(rendering::SkyComponent);
 
 		serialization::SceneSerializer::RegisterTable();
 		defaultScreen = new Screen{1920, 1080, 1.f, ((float)1920/(float)1080), false, true};

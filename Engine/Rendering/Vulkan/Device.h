@@ -46,16 +46,19 @@ namespace gns::rendering
 {
 
 	struct ComputePushConstants {
-		glm::vec4 data1;
-		glm::vec4 data2;
-		glm::vec4 data3;
-		glm::vec4 data4;
+		glm::mat4 imvProj;
+		glm::mat4 imvView;
+		glm::vec4 color;
+		float yaw;
 	};
 
 	struct ComputeEffect {
 		const char* name;
 		VkPipeline pipeline;
 		VkPipelineLayout layout;
+		VkDescriptorSetLayout computeSetLayout;
+		VkDescriptorSet computeSet;
+		VulkanTexture* backgroundTexture {nullptr};
 		ComputePushConstants data;
 	};
 
@@ -115,20 +118,20 @@ namespace gns::rendering
 		VulkanShader& GetShader(ShaderHandle handle);
 		MeshHandle CreateMesh();
 		VulkanMesh& GetMesh(MeshHandle handle);
+		void SetBackgroundTexture(TextureHandle handle);
 
 	private:
 		Screen* m_screen;
-		// Move this for sure:
-		std::vector<ComputeEffect> backgroundEffects;
+		ComputeEffect backgroundEffect;
 		int currentBackgroundEffect{ 0 };
 		VkExtent2D drawExtent;
-		VkPipelineLayout m_gradientPipelineLayout; //default compute pipeline layout.
 
 		VkDescriptorSetLayout m_perFrameDescriptorLayout;
 		VulkanBuffer m_objectStorageBuffer;
 		VulkanBuffer m_pointLightStorageBuffer;
 		VulkanBuffer m_spotLightStorageBuffer;
 		VulkanBuffer m_dirLightStorageBuffer;
+		VulkanBuffer m_skyLightStorageBuffer;
 		VulkanBuffer m_gpuSceneDataBuffer;
 
 		Texture* offscreen_Texture;
@@ -221,6 +224,8 @@ namespace gns::rendering
 		void UpdatePointLightBuffer(void* data, size_t size);
 		void UpdateSpotLightBuffer(void* data, size_t size);
 		void UpdateDirLightBuffer(void* data, size_t size);
+		void UpdateSkyLightBuffer(void* data, size_t size, 
+			glm::mat4 invProj, glm::mat4 invViewRot, glm::vec4 color, float yaw);
 
 		void PrepareImages(VkCommandBuffer cmd);
 		void FinishImages(VkCommandBuffer cmd, uint32_t imageIndex);

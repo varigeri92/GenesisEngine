@@ -49,4 +49,10 @@ namespace gns::rendering
 		glm::vec4 color; // .w = intensity
 		glm::vec4 direction; // .w = angle
 	};
+
+	struct SkyLight
+	{
+		glm::vec4 color{ 1.f, 1.f, 1.f, 1.f};//W->intensity;
+		glm::vec4 direction{ 0.f,0.f,0.f,0.f };
+	};
 }

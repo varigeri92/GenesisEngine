@@ -257,12 +257,33 @@ void LoadMaterial(const std::string& filePath)
 
 }
 
-void LoadTexture(const std::string& filePath, rendering::Texture& texture)
+void LoadTexture(const std::string& filePath, rendering::Texture& texture, bool* hdr)
 {
     int32_t channels;
     int32_t chan = 4;
 
-    texture.data = stbi_load(filePath.c_str(), (int32_t*) & texture.width, (int32_t*)&texture.height, &channels, chan);
+    if(stbi_is_hdr(filePath.c_str()))
+    {
+        *hdr = true;
+        LOG_INFO("Loading HDR image!" + filePath);
+        texture.data = stbi_loadf(
+            filePath.c_str(), 
+            reinterpret_cast<int32_t*>(&texture.width), 
+            reinterpret_cast<int32_t*>(&texture.height), &channels, chan);
+        return;
+    }
+    *hdr = false;
+    LOG_INFO("Loading SDR image!" + filePath);
+    texture.data = stbi_load(
+        filePath.c_str(), 
+        reinterpret_cast<int32_t*>(&texture.width), 
+        reinterpret_cast<int32_t*>(&texture.height), 
+        &channels, chan);
+
+    if(texture.data == nullptr)
+    {
+        LOG_INFO("Loading image Failed!" + filePath);
+    }
 }
 
 void LoadAsset(const std::string& filePath)

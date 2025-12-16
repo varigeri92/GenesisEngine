@@ -30,6 +30,8 @@ std::unordered_map<std::string, AssetType> fileExtensionAssetTypeMap = {
     {"jpg", AssetType::Texture},
     {"jpeg", AssetType::Texture},
     {"png", AssetType::Texture},
+    {"exr", AssetType::Texture},
+    {"hdr", AssetType::Texture},
 
     {"mat",AssetType::Material}
 };

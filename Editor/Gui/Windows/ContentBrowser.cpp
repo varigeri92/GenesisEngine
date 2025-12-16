@@ -130,8 +130,6 @@ void gns::editor::gui::ContentBrowser::InitWindow()
 	currentSelectedEntry = &rootEntry;
 	render_system = SystemsManager::GetSystem<RenderSystem>();
 	texture = render_system->CreateTexture(PathManager::FromResourcesRelative(R"(EditorResources\Icons.png)"));
-	//render_system->CreateTextureDescriptor(texture);
-	//render_system->UpdateTextureDescriptor(texture);
 }
 
 bool gns::editor::gui::ContentBrowser::OnWindowBegin()

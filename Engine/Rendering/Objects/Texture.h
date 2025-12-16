@@ -30,9 +30,9 @@ namespace gns::rendering
 		void* data;
 		uint32_t width;
 		uint32_t height;
-		uint32_t mipLevels = 0;
-
+		uint32_t mipLevels = 1;
 		TextureHandle handle;
+		bool hdr;
 
 	private:
 		bool keepData;

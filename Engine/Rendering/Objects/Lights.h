@@ -44,10 +44,21 @@ namespace gns::rendering
 	struct LightComponent : public ISerializeableComponent
 	{
 		float intensity;
+		LightComponent() : intensity(1.f) {};
 		void RegisterFields(ComponentMeta& componentMetaData)
 		{
 			SET_CMP_NAME(LightComponent);
 			REGISTER_FIELD(float, intensity);
+		}
+	};
+
+	struct SkyComponent : public ISerializeableComponent
+	{
+		guid hdr { 0 };
+		void RegisterFields(ComponentMeta& componentMetaData)
+		{
+			SET_CMP_NAME(SkyComponent);
+			REGISTER_FIELD(guid, hdr);
 		}
 	};
 }

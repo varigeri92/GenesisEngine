@@ -10,7 +10,7 @@ namespace gns::editor::entity
 {
 	enum class PreconfiguredEntityType
 	{
-		Empty, PointLight, DirectionalLight, SpotLight
+		Empty, PointLight, DirectionalLight, SpotLight, SkyLight
 	};
 
 	class EditorEntityManager
@@ -22,5 +22,6 @@ namespace gns::editor::entity
 		void CreatePointLight(Entity& entity);
 		void CreateDirectionalLight(Entity& entity);
 		void CreateSpotLight(Entity& entity);
+		void CreateSkyLight(Entity& entity);
 	};
 }

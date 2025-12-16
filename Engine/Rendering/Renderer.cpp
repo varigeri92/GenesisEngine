@@ -110,6 +110,12 @@ void gns::rendering::Renderer::DisposeShader(ShaderHandle handle)
     m_device->DisposeShader(handle);
 }
 
+void gns::rendering::Renderer::SetbgTexture(TextureHandle handle)
+{
+    m_device->SetBackgroundTexture(handle);
+    LOG_INFO("BG_Texture set!");
+}
+
 VkDescriptorPool imguiPool;
 void gns::rendering::Renderer::InitImGui()
 {
@@ -220,7 +226,7 @@ void gns::rendering::Renderer::UpdateBuffers()
 {
 
 }
-
+uint32_t currenthandle = (uint32_t)-1;
 void gns::rendering::Renderer::BuildDrawData()
 {
     constexpr uint32_t UniformBufferBinding = 0;
@@ -262,6 +268,48 @@ void gns::rendering::Renderer::BuildDrawData()
     m_device->UpdateStorageBuffer(objects.data(), objects.size() * sizeof(ObjectDrawData));
 
     {
+        if (currenthandle == (uint32_t) - 1)
+        {
+			TextureHandle handle = Object::Find<Texture>("black")->handle;
+            SetbgTexture(handle);
+            currenthandle = handle.handle;
+        }
+
+    	SkyLight sky_light = {};
+        auto skyLight_view = SystemsManager::GetRegistry()
+            .view<gns::entity::EntityComponent,
+            gns::entity::Transform,
+            gns::rendering::LightComponent,
+            gns::rendering::SkyComponent,
+            gns::rendering::ColorComponent>();
+        for (auto [entt, entity, transform, light, skyComp, color] : skyLight_view.each())
+        {
+            if (!entity.active)
+                continue;
+            globalUniform.pointLight_count++;
+            glm::vec3 forward = {
+               cosf(transform.rotation.x) * sinf(transform.rotation.y),
+               sinf(transform.rotation.x),
+               cosf(transform.rotation.x) * cosf(transform.rotation.y)
+            };
+            sky_light.direction = { forward.x, forward.y, forward.z, transform.rotation.y };
+            sky_light.color = { color.color.r, color.color.g, color.color.b, light.intensity};
+            Texture* hdr_texture = Object::Get<Texture>(skyComp.hdr);
+            if(hdr_texture)
+            {
+	            if(hdr_texture->handle.handle != currenthandle)
+	            {
+					SetbgTexture(hdr_texture->handle);
+                    currenthandle = hdr_texture->handle.handle;
+	            }
+            }
+        }
+        glm::mat4 invProj = glm::inverse(globalUniform.proj);
+        glm::mat4 invViewRot = glm::inverse(globalUniform.view);
+        m_device->UpdateSkyLightBuffer(&sky_light, sizeof(SkyLight), invProj, invViewRot, sky_light.color, sky_light.direction.w);
+    }
+
+    {
 	    auto pointLight_view = SystemsManager::GetRegistry()
 		.view<gns::entity::EntityComponent,
 			gns::entity::Transform,
@@ -291,7 +339,8 @@ void gns::rendering::Renderer::BuildDrawData()
 	        gns::rendering::LightComponent,
 	        gns::rendering::ColorComponent>(entt::exclude<
                 gns::rendering::PointLightComponent, 
-                gns::rendering::SpotLightComponent>);
+                gns::rendering::SpotLightComponent,
+				gns::rendering::SkyComponent>);
 
 	    std::vector<DirectionalLight> dir_lights = {};
 	    dir_lights.reserve(dirLightWiev.size_hint());
@@ -313,10 +362,6 @@ void gns::rendering::Renderer::BuildDrawData()
 	            color.color.r, color.color.g, color.color.b, light.intensity);
             
             BuildDirLightFrustumBasic(forward, globalUniform.camPosition);
-            /*
-            glm::mat4 inverseCamera = glm::inverse(globalUniform.viewProj);
-            BuildDirLightFrustum(inverseCamera, forward);
-             */
 	    }
 	    m_device->UpdateDirLightBuffer(dir_lights.data(), dir_lights.size() * sizeof(DirectionalLight));
     }

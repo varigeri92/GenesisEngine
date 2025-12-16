@@ -10,8 +10,8 @@
 gns::rendering::Texture::Texture(const std::string& name, const std::string& path)
 	: Object(name)
 {
-	assetLibrary::LoadTexture(path, *this);
-	CreateTexture(data, width, height, 0, false);
+	assetLibrary::LoadTexture(path, *this, &hdr);
+	CreateTexture(data, width, height, mipLevels, false);
 	free(data);
 }
 
@@ -34,7 +34,10 @@ void gns::rendering::Texture::Dispose()
 void gns::rendering::Texture::CreateTexture(void* data, uint32_t width, uint32_t height, uint32_t mipLevels, bool keepData)
 {
 	auto* renderer = SystemsManager::GetSystem<RenderSystem>()->GetRenderer();
-	handle = renderer->CreateTexture(data, { width, height, 1 }, VK_FORMAT_R8G8B8A8_UNORM,VK_IMAGE_USAGE_SAMPLED_BIT);
+	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+	if (hdr)
+		format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	handle = renderer->CreateTexture(data, { width, height, 1 }, format, VK_IMAGE_USAGE_SAMPLED_BIT);
 	renderer->CreateTextureDescriptorSet(this);
 	renderer->UpdateTextureDescriptorSet(this);
 	renderer->CreateSampler(this);

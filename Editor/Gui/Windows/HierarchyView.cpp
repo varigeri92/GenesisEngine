@@ -139,7 +139,8 @@ void gns::editor::gui::HierarchyView::DrawHierarchyContextMenu()
 			{
 				if (ImGui::MenuItem("Sky Light"))
 				{
-					LOG_INFO("Create New Entity");
+					entity::EditorEntityManager manager;
+					manager.CreateNewEntity(entity::PreconfiguredEntityType::SkyLight);
 				}
 
 				if (ImGui::MenuItem("Directional Light"))

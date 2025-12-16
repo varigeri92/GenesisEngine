@@ -23,7 +23,7 @@ namespace gns::assetLibrary
 	};
 
 	GNS_API void LoadAsset(const std::string& filePath);
-	void LoadTexture(const std::string& filePath, rendering::Texture& texture);
+	void LoadTexture(const std::string& filePath, rendering::Texture& texture, bool* hdr);
 	GNS_API void LoadMeshAsset(const MeshAsset& mesh_asset, 
 		const std::function<void(const std::vector<guid>&, const std::vector<guid>&)>& onLoadSuccess_callback);
 }

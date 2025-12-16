@@ -43,7 +43,7 @@ void gns::rendering::Swapchain::Create(Screen* screen)
         .set_desired_format(VkSurfaceFormatKHR{ .format = m_format, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
         .set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR)
         .set_desired_extent(screen->width, screen->height)
-        .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+        .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
         .build()
         .value();
 
@@ -134,6 +134,7 @@ void gns::rendering::Swapchain::AllocateDescriptorSet(DescriptorAllocator& descr
 
     DescriptorLayoutBuilder builder;
     builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+    builder.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     m_renderTargetSetLayout = builder.Build(m_device, VK_SHADER_STAGE_COMPUTE_BIT);
 
     m_renderTarget_DS = descriptor_allocator.Allocate(m_device, m_renderTargetSetLayout);

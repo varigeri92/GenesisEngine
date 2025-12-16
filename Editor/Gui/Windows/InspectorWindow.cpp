@@ -38,8 +38,32 @@ std::unordered_map<size_t, std::function<void(const std::string& name, void* com
 	},
 	{typeid(gns::guid).hash_code(),[](const std::string& name, void* componentData, size_t offset)
 		{
-			ImGui::Button( std::to_string(*reinterpret_cast<size_t*>(static_cast<char*>(componentData) + offset)).c_str(), 
+			size_t* value_ptr = reinterpret_cast<size_t*>(static_cast<char*>(componentData) + offset);
+
+			ImGui::Button( std::to_string(*value_ptr).c_str(),
 				{ ImGui::GetContentRegionAvail().x, 0 });
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GNS_ASSET"))
+				{
+					const std::string& payload_string = *static_cast<std::string*>(payload->Data);
+					LOG_INFO(payload_string);
+
+					if (gns::editor::assets::AssetImporter::ImportAsset(payload_string, false))
+					{
+						gns::AssetMetadata* metadata_ptr = gns::editor::assets::AssetImporter::GetMetadata(payload_string);
+						if (metadata_ptr->assetType == gns::assetLibrary::AssetType::Texture)
+						{
+							gns::RenderSystem* renderSystem = gns::SystemsManager::GetSystem<gns::RenderSystem>();
+							gns::rendering::Texture* texture = renderSystem->CreateTexture(PathManager::FromAssetsRelative(metadata_ptr->srcPath));
+							*value_ptr = texture->getGuid();
+						}
+					}
+
+				}
+				ImGui::EndDragDropTarget();
+			}
+
 		}
 	},
 	{typeid(bool).hash_code(),[](const std::string& name, void* componentData, size_t offset)
@@ -115,33 +139,6 @@ void ReadShaderAttributes(gns::rendering::Shader* shader)
 	{
 		LOG_INFO("\t\t" + res.gl_plain_uniforms[i].name);
 	}
-
-	/*
-	spirv_cross::Compiler comp(std::move(spirv));
-
-	spirv_cross::ShaderResources res = comp.get_shader_resources();
-	LOG_INFO("Shader Data of: " + shader->fragmentShaderPath);
-	LOG_INFO("\t Uniforms:");
-	for (size_t i = 0; i < res.uniform_buffers.size(); i++)
-	{
-		LOG_INFO(res.uniform_buffers[i].name);
-		auto& type = comp.get_type(res.uniform_buffers[i].type_id);
-		uint32_t set = comp.get_decoration(res.uniform_buffers[i].id, spv::DecorationDescriptorSet);
-		uint32_t binding = comp.get_decoration(res.uniform_buffers[i].id, spv::DecorationBinding);
-		auto member_types = type.member_types;
-		auto member_names = comp.get_type(res.uniform_buffers[i].type_id).member_name_cache;
-		//if (res.uniform_buffers[i].name == "SceneData")
-			//continue;
-
-
-		for (size_t j = 0; j < member_types.size(); j++) {
-			auto name = comp.get_member_name(type.self, j);
-			auto member_type = comp.get_type(member_types[i]);
-			size_t member_size = comp.get_declared_struct_member_size(type, j);
-			size_t offset = comp.type_struct_member_offset(type, j);
-		}
-	}
-	*/
 }
 
 
