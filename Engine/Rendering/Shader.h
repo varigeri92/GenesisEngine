@@ -17,4 +17,16 @@ namespace gns::rendering
 		~Shader() = default;
 		void Dispose() override;
 	};
+
+	class ComputeShader : public Object
+	{
+	public:
+		ShaderHandle handle;
+		std::string shaderPath;
+		bool front = true;
+
+		ComputeShader(const std::string& shaderPath, const std::string& name);
+		~ComputeShader() override;
+		void Dispose() override;
+	};
 }

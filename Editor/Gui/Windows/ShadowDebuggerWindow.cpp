@@ -15,22 +15,8 @@ bool draw = false;
 bool togleView = false;
 void ShadowDebuggerWindow::OnWindowDraw()
 {
-	if (ImGui::Button("draw"))
-		draw = !draw;
-	ImGui::SameLine();
-	if (ImGui::Button("toggle"))
-		togleView = !togleView;
-	if (!draw) return;
-
 	m_drawRegion = ImGui::GetContentRegionAvail();
-	if(!togleView)
-	{
-		ImGui::Image(m_renderTexture_scene, m_drawRegion);
-	}
-	else
-	{
-		ImGui::Image(m_renderTexture_shadow, m_drawRegion);
-	}
+	ImGui::Image(m_renderTexture_shadow, m_drawRegion);
 }
 
 ShadowDebuggerWindow::~ShadowDebuggerWindow() = default;

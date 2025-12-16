@@ -1,7 +1,7 @@
 #version 460
 
 layout (local_size_x = 16, local_size_y = 16) in;
-// Output storage image (same as you have)
+
 layout(rgba16f, set = 0, binding = 0) uniform writeonly image2D outImage;
 
 // Input HDR equirect texture (NEW)
@@ -61,6 +61,7 @@ void main()
     worldDir = rotateY(worldDir, pc.yaw);
 
     vec2 envUV = dirToEquirectUV(worldDir);
+    envUV.y = 1.0 - envUV.y;
     vec3 hdr = texture(uHdri, envUV).rgb;
 
     vec4 outColor = vec4((hdr * pc.color.xyz) * pc.color.a, 1.0);

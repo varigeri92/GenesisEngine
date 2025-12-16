@@ -197,6 +197,63 @@ void gns::rendering::Device::InitBackgroundPipelines()
         });
 }
 
+void gns::rendering::Device::CreateComputePipeline()
+{
+    VkPipelineLayout computePipelineLayout;
+
+
+    DescriptorLayoutBuilder descriptorLayoutBuilder;
+    descriptorLayoutBuilder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+    descriptorLayoutBuilder.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    VkDescriptorSetLayout layout = descriptorLayoutBuilder.Build(m_device, VK_SHADER_STAGE_COMPUTE_BIT);
+
+    DescriptorAllocator::Allocate(m_device, layout);
+
+    VkPipelineLayoutCreateInfo computeLayout{};
+    computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    computeLayout.pNext = nullptr;
+    computeLayout.pSetLayouts = m_swapchain.GetSetLayout_ptr();
+    computeLayout.setLayoutCount = 1;
+    computeLayout.pPushConstantRanges = nullptr;
+    computeLayout.pushConstantRangeCount = 0;
+
+    _VK_CHECK(vkCreatePipelineLayout(m_device, &computeLayout, nullptr, &computePipelineLayout), "Failed To create Pipeline Layout");
+
+
+    const std::string gradient_ShaderPath = PathHelper::FromResourcesRelative(R"(Shaders\CubemapGen.comp.spv)");
+    VkShaderModule gradientShader;
+    if (!utils::LoadShaderModule(gradient_ShaderPath.c_str(), m_device, &gradientShader)) {
+        LOG_ERROR("Failed To load Shader: " + gradient_ShaderPath);
+    }
+
+    VkPipelineShaderStageCreateInfo stageinfo{};
+    stageinfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stageinfo.pNext = nullptr;
+    stageinfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    stageinfo.module = gradientShader;
+    stageinfo.pName = "main";
+
+    VkComputePipelineCreateInfo computePipelineCreateInfo{};
+    computePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    computePipelineCreateInfo.pNext = nullptr;
+    computePipelineCreateInfo.layout = backgroundEffect.layout;
+    computePipelineCreateInfo.stage = stageinfo;
+
+    backgroundEffect.name = "gradient";
+    backgroundEffect.data = {};
+
+    _VK_CHECK(vkCreateComputePipelines(m_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &backgroundEffect.pipeline),
+        "Failed to create Compute Pipeline.");
+
+    vkDestroyShaderModule(m_device, gradientShader, nullptr);
+
+    m_deletionQueue.Push([&]() {
+        vkDestroyPipelineLayout(m_device, backgroundEffect.layout, nullptr);
+        vkDestroyPipeline(m_device, backgroundEffect.pipeline, nullptr);
+        });
+
+}
+
 void gns::rendering::Device::CreatePipeline(ShaderHandle handle, Shader& shaderObject)
 {
     VulkanShader& vkShader = GetShader(handle);
@@ -213,7 +270,6 @@ void gns::rendering::Device::CreatePipeline(ShaderHandle handle, Shader& shaderO
         builder.AddBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         builder.AddBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         builder.AddBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        builder.AddBinding(6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         vkShader.m_descriptorSetLayout = builder.Build(m_device, VK_SHADER_STAGE_FRAGMENT_BIT);
     }
 
@@ -412,6 +468,7 @@ void gns::rendering::Device::InitDescriptors()
         builder.AddBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // point light buffer
         builder.AddBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // spot light buffer
         builder.AddBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); // dir light buffer
+        builder.AddBinding(5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); // shadow map
         m_perFrameDescriptorLayout = builder.Build(m_device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     }
 
@@ -642,7 +699,11 @@ void gns::rendering::Device::UpdatePerFrameDescriptors(VkDescriptorSet& perFrame
     writer.WriteBuffer(4, m_dirLightStorageBuffer.buffer,
         m_dirLightStorageBuffer.bufferSize, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 
+    VulkanTexture& vkTex = GetTexture(m_ShadowTexture_debug->handle);
+    writer.WriteImage(5, vkTex.image.imageView, vkTex.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
 	writer.UpdateSet(m_device, perFrameSet);
+    DescriptorWriter image_writer;
 }
 
 void gns::rendering::Device::UpdateMaterialData(VkDescriptorSet& set, Material& material)
@@ -655,8 +716,6 @@ void gns::rendering::Device::UpdateMaterialData(VkDescriptorSet& set, Material& 
     	const VulkanImage& vulkanImage = (vkTexture.image);
 		image_writer.WriteImage(i+1, vulkanImage.imageView, vkTexture.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     }
-    VulkanTexture& vkTex = GetTexture(m_ShadowTexture_debug->handle);
-    image_writer.WriteImage(6, vkTex.image.imageView, vkTex.sampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     image_writer.UpdateSet(m_device, set);
 }
 

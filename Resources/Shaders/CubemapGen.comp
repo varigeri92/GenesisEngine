@@ -1,0 +1,49 @@
+#version 460
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// output: cubemap stored as 2D array with 6 layers (faces)
+layout(rgba16f, set=0, binding=0) uniform writeonly image2DArray outCube;
+// input: equirect HDRI
+layout(set=0, binding=1) uniform sampler2D uEquirect;
+
+const float PI = 3.14159265359;
+
+vec2 dirToEquirectUV(vec3 d) {
+    d = normalize(d);
+    float u = atan(d.z, d.x) / (2.0 * PI) + 0.5;
+    float v = 0.5 - asin(clamp(d.y, -1.0, 1.0)) / PI;
+    return vec2(u, v);
+}
+
+// map (face, u, v) -> direction
+vec3 faceUVToDir(int face, float u, float v)
+{
+    // u,v in [-1..1]
+    // Note: if you see a rotated/mirrored face later, tweak signs here (convention differences are normal).
+    if (face == 0) return normalize(vec3( 1.0, -v, -u)); // +X
+    if (face == 1) return normalize(vec3(-1.0, -v,  u)); // -X
+    if (face == 2) return normalize(vec3( u,  1.0,  v)); // +Y
+    if (face == 3) return normalize(vec3( u, -1.0, -v)); // -Y
+    if (face == 4) return normalize(vec3( u, -v,  1.0)); // +Z
+                 return normalize(vec3(-u, -v, -1.0));    // -Z
+}
+
+void main()
+{
+    ivec3 gid = ivec3(gl_GlobalInvocationID.xyz);
+    int face = gid.z;
+
+    ivec2 size = imageSize(outCube).xy;
+    if (gid.x >= size.x || gid.y >= size.y || face >= 6) return;
+
+    // pixel center -> [-1..1] range
+    vec2 uv01 = (vec2(gid.xy) + 0.5) / vec2(size);
+    vec2 uv = uv01 * 2.0 - 1.0;
+
+    vec3 dir = faceUVToDir(face, uv.x, uv.y);
+
+    vec2 eq = dirToEquirectUV(dir);
+    vec3 hdr = texture(uEquirect, eq).rgb;
+
+    imageStore(outCube, ivec3(gid.xy, face), vec4(hdr, 1.0));
+}

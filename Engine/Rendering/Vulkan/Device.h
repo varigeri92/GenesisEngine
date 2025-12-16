@@ -181,6 +181,7 @@ namespace gns::rendering
 
 		void InitPipelines();
 		void InitBackgroundPipelines();
+		void CreateComputePipeline();
 
 		bool InitVulkan();
 		void CreateSwapchain();

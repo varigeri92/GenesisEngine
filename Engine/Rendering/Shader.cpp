@@ -16,3 +16,16 @@ void gns::rendering::Shader::Dispose()
 	renderSystem->DisposeShader(handle);
 	Object::Dispose();
 }
+
+gns::rendering::ComputeShader::ComputeShader(const std::string& shaderPath, const std::string& name)
+	:Object(name), shaderPath(shaderPath)
+{}
+
+gns::rendering::ComputeShader::~ComputeShader() = default;
+
+void gns::rendering::ComputeShader::Dispose()
+{
+	RenderSystem* renderSystem = SystemsManager::GetSystem<RenderSystem>();
+	renderSystem->DisposeShader(handle);
+	Object::Dispose();
+}

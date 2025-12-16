@@ -66,7 +66,6 @@ layout(set = 0, binding = 2) uniform sampler2D normalTexture;
 layout(set = 0, binding = 3) uniform sampler2D metallicRoughnessTexture;
 layout(set = 0, binding = 4) uniform sampler2D aoTexture;
 layout(set = 0, binding = 5) uniform sampler2D emissiveTexture;
-layout(set = 0, binding = 6) uniform sampler2D shadowMap;
 
 struct PointLight
 {
@@ -98,6 +97,9 @@ layout(std140, set = 1, binding = 3) readonly buffer SpotLightBuffer{
 layout(std140, set = 1, binding = 4) readonly buffer DirLightBuffer{
     DirLight objects[];
 } dirLights;
+
+layout(set = 1, binding = 5) uniform sampler2D shadowMap;
+layout(set = 1, binding = 6) uniform samplerCube environment;
 
 #endif
 
