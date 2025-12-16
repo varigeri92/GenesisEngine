@@ -207,7 +207,7 @@ void gns::rendering::Device::CreateComputePipeline()
     descriptorLayoutBuilder.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     VkDescriptorSetLayout layout = descriptorLayoutBuilder.Build(m_device, VK_SHADER_STAGE_COMPUTE_BIT);
 
-    DescriptorAllocator::Allocate(m_device, layout);
+    m_globalDescriptorAllocator.Allocate(m_device, layout);
 
     VkPipelineLayoutCreateInfo computeLayout{};
     computeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
