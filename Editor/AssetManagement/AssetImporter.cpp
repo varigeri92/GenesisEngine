@@ -49,13 +49,14 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
         LOG_INFO("File is 'meta' or 'gnsMesh'");
     	return true;
     }
-    guid guid = Guid::GetNewGuid();
-    if(IsImported(relative_path))
+    guid assetHandle = Guid::GetNewGuid();
+    std::string meta_path = "";
+    if(IsImported(relative_path, meta_path))
     {
         if (reImport)
 	        try
 	        {
-				guid = YAML::LoadFile(
+            assetHandle = YAML::LoadFile(
                     PathManager::FromAssetsRelative(relative_path + ".meta"))["asset_guid"].as<size_t>();
 	        }
 	        catch (const std::exception& e)
@@ -63,50 +64,24 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
                 LOG_ERROR("Failed to read YAML '{}': {}", relative_path, e.what());
 	        }
         else
-            return true;
-    }
-
-    AssetLibrary::assetDatabase[guid] = {
-        .assetGuid = guid,
-        .assetName = fileUtils::GetFileNameFromPath(relative_path),
-        .srcPath = relative_path,
-        .assetType = assets::AssetImporter::GetAssetType(fileUtils::GetFileExtension(relative_path))
-    };
-
-    YAML::Emitter meta_yaml;
-    meta_yaml << YAML::BeginMap
-        << "asset_guid" << AssetLibrary::assetDatabase[guid].assetGuid
-        << "asset_name" << AssetLibrary::assetDatabase[guid].assetName
-        << "src_path" << AssetLibrary::assetDatabase[guid].srcPath
-        << "asset_type" << static_cast<uint32_t>(AssetLibrary::assetDatabase[guid].assetType) << YAML::EndMap;
-    std::string meta_filePath = relative_path + ".meta";
-    
-    {
-	    std::ofstream outfile(PathManager::FromAssetsRelative(meta_filePath));
-	    outfile << meta_yaml.c_str() << std::endl;
-	    outfile.close();
-    }
-
-    YAML::Emitter database_yaml;
-    database_yaml << YAML::BeginMap
-        << "guid" << guid
-        << "meta_path" << meta_filePath
-	<< YAML::EndMap;
-
-    std::string DatabaseFilePath = PathManager::FromDatabaseRelative("." + std::to_string(guid));
-    {
-	    std::ofstream outfile(DatabaseFilePath);
-	    outfile << database_yaml.c_str() << std::endl;
-	    outfile.close();
+        {
+            AssetMetadata* assetMetadata = GetMetadata(relative_path);
+            assetHandle = assetMetadata->assetGuid;
+            AssetRegistry::Add(assetMetadata->assetGuid, 
+                { .assetId = assetMetadata->assetGuid, .path = PathManager::AssetsPath + assetMetadata->srcPath }
+            );
+    		return true;
+        }
     }
     bool import_result = false;
-    switch (AssetLibrary::assetDatabase[guid].assetType) {
+    switch (AssetLibrary::assetDatabase[assetHandle].assetType) {
     case assetLibrary::AssetType::None:
 	    break;
     case assetLibrary::AssetType::Mesh:
-        import_result = ImportMesh(relative_path, {}, guid);
+        import_result = ImportMesh(relative_path, {}, assetHandle);
 	    break;
     case assetLibrary::AssetType::Texture:
+        import_result = true;
 	    break;
     case assetLibrary::AssetType::Sound:
 	    break;
@@ -120,17 +95,56 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
     }
 
     if(import_result)
-		AssetRegistry::Add(guid, { .assetId = guid, .path = PathManager::AssetsPath + relative_path });
+    {
+        AssetLibrary::assetDatabase[assetHandle] = {
+		    .assetGuid = assetHandle,
+		    .assetName = fileUtils::GetFileNameFromPath(relative_path),
+		    .srcPath = relative_path,
+		    .assetType = assets::AssetImporter::GetAssetType(fileUtils::GetFileExtension(relative_path))
+        };
+
+        YAML::Emitter meta_yaml;
+        meta_yaml << YAML::BeginMap
+            << "asset_guid" << AssetLibrary::assetDatabase[assetHandle].assetGuid
+            << "asset_name" << AssetLibrary::assetDatabase[assetHandle].assetName
+            << "src_path" << AssetLibrary::assetDatabase[assetHandle].srcPath
+            << "asset_type" << static_cast<uint32_t>(AssetLibrary::assetDatabase[assetHandle].assetType) << YAML::EndMap;
+        std::string meta_filePath = relative_path + ".meta";
+
+        {
+            std::ofstream outfile(PathManager::FromAssetsRelative(meta_filePath));
+            outfile << meta_yaml.c_str() << std::endl;
+            outfile.close();
+        }
+
+        YAML::Emitter database_yaml;
+        database_yaml << YAML::BeginMap
+            << "guid" << assetHandle
+            << "meta_path" << meta_filePath
+            << YAML::EndMap;
+
+        std::string DatabaseFilePath = PathManager::FromDatabaseRelative("." + std::to_string(assetHandle));
+        {
+            std::ofstream outfile(DatabaseFilePath);
+            outfile << database_yaml.c_str() << std::endl;
+            outfile.close();
+        }
+
+		AssetRegistry::Add(assetHandle, { .assetId = assetHandle, .path = PathManager::AssetsPath + relative_path });
+    }
 
 	return import_result;
 }
 
-bool gns::editor::assets::AssetImporter::IsImported(const std::string& filePath)
+bool gns::editor::assets::AssetImporter::IsImported(const std::string& filePath, std::string& out_metaPath)
 {
-    if(fileUtils::FileExists(PathManager::FromAssetsRelative(filePath + ".meta")))
+    std::string meta_path = filePath + ".meta";
+    if(fileUtils::FileExists(PathManager::FromAssetsRelative(meta_path)))
     {
+        out_metaPath = meta_path;
         return true;
     }
+    out_metaPath = "";
     return false;
 }
 
@@ -186,6 +200,21 @@ gns::AssetMetadata* gns::editor::assets::AssetImporter::GetMetadata(const std::s
         };
         return &AssetLibrary::assetDatabase[asset_guid];
     }
+}
+
+gns::AssetMetadata* gns::editor::assets::AssetImporter::GetMetadata(const gns::guid& assetGuid)
+{
+    std::string dataBaseEntryPath = PathManager::FromDatabaseRelative("." + std::to_string(assetGuid));
+    LOG_INFO(dataBaseEntryPath);
+    if(!fileUtils::FileExists(dataBaseEntryPath))
+    {
+        LOG_INFO("database entry '" + std::to_string(assetGuid) + "' not found");
+        return nullptr;
+    }
+
+    YAML::Node db_entry = YAML::LoadFile(dataBaseEntryPath);
+    std::string meta_path = db_entry["meta_path"].as<std::string>();
+    return GetMetadata(meta_path);
 }
 
 gns::MeshAsset gns::editor::assets::AssetImporter::GetMeshAsset(const AssetMetadata& asset_metadata)
@@ -291,8 +320,9 @@ bool gns::editor::assets::AssetImporter::ImportMesh(std::string file_path, MeshI
     }
     catch (const std::exception& e)
     {
-        LOG_ERROR("Failed to inport Mesh '{}': {}", path, e.what());
+        LOG_ERROR("Failed to inport Mesh '"+ file_path +"': " + e.what());
         return false;
     }
-    
+
+    return true;
 }

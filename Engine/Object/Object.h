@@ -8,18 +8,18 @@ namespace gns
 {
 	class Object
 	{
+		guid m_guid; //objectInstance GUID
+		guid m_assetHandle {0}; //AssetReference - AssetSource GUID 
 	public:
 		GNS_API static std::unordered_map<guid, Object*> m_objectMap;
-
 		static void ReserveObjectMemory(const size_t reserve_size);
-
 		Object(std::string name);
 		virtual ~Object() = default;
 
-		guid m_guid;
 		std::string name;
-
-		inline guid getGuid() const { return m_guid; };
+		inline guid getGuid() const { return m_guid; }
+		inline guid getAssetHandle() const { return m_guid; }
+		inline void SetAssetHandle(gns::guid asset_handle) {m_assetHandle = asset_handle;}
 
 		template<typename T, typename = std::enable_if<std::is_base_of<Object, T>::value>::type, typename... Args>
 		static T* Create(Args&& ... args)

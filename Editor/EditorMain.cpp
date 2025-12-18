@@ -1,5 +1,6 @@
 ﻿#include "PathManager.h"
 #include "../Engine/Engine.h"
+#include "../Engine/AssetDatabase/AssetManagement/AssetDatabase.h"
 #include "../Engine/Rendering/GuiWindowDrawer.h"
 #include "AssetManagement/AssetImporter.h"
 #include "EditorScene/EditorCamera.h"
@@ -191,6 +192,16 @@ int main(int argc, char* argv[])
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::HierarchyView>();
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::SceneView>();
 		gns::GuiWindowDrawer::CreateGUIWindow<ShadowDebuggerWindow>();
+
+		gns::assets::AssetDatabase::SetGetterFunc([](gns::guid guid)
+			{
+				LOG_INFO("Call AssetGetterFunction");
+				gns::AssetMetadata* assetMetadata = gns::editor::assets::AssetImporter::GetMetadata(guid);
+				LOG_INFO("Asset name: '" + assetMetadata->assetName + "' has been found");
+				gns::assets::AssetDatabase::Entry entry = {};
+				entry.filepath = assetMetadata->srcPath;
+				return entry;
+			});
 
 	});
 	engine.Run();

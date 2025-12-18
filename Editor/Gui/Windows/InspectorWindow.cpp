@@ -42,6 +42,46 @@ std::unordered_map<size_t, std::function<void(const std::string& name, void* com
 				{ ImGui::GetContentRegionAvail().x, 0 });
 		}
 	},
+	{typeid(gns::rendering::Texture).hash_code(),[](const std::string& name, void* componentData, size_t offset)
+		{
+
+			auto slot = reinterpret_cast<gns::rendering::Texture**>(static_cast<std::byte*>(componentData) + offset);
+			gns::rendering::Texture* value_ptr = *slot;
+			if(value_ptr)
+			{
+				ImGui::Button(std::to_string(value_ptr->getGuid()).c_str(),
+					{ ImGui::GetContentRegionAvail().x, 0 });
+			}
+			else
+			{
+				ImGui::Button("none",
+					{ ImGui::GetContentRegionAvail().x, 0 });
+			}
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GNS_ASSET"))
+				{
+					const std::string& payload_string = *static_cast<std::string*>(payload->Data);
+					LOG_INFO(payload_string);
+
+					if (gns::editor::assets::AssetImporter::ImportAsset(payload_string, false))
+					{
+						gns::AssetMetadata* metadata_ptr = gns::editor::assets::AssetImporter::GetMetadata(payload_string);
+						if (metadata_ptr->assetType == gns::assetLibrary::AssetType::Texture)
+						{
+							gns::RenderSystem* renderSystem = gns::SystemsManager::GetSystem<gns::RenderSystem>();
+							gns::rendering::Texture* texture = renderSystem->CreateTexture(PathManager::FromAssetsRelative(metadata_ptr->srcPath), 
+								metadata_ptr -> assetGuid);
+							*slot = texture;
+						}
+					}
+
+				}
+				ImGui::EndDragDropTarget();
+			}
+
+		}
+	},
 	{typeid(bool).hash_code(),[](const std::string& name, void* componentData, size_t offset)
 		{
 			ImGui::Checkbox(("##" + name).c_str(),
@@ -212,7 +252,8 @@ void gns::editor::gui::InspectorWindow::InitWindow()
 		{
 			hasSelection = true;
 			currentSelectedAssetPath = selectedItem->path;
-			is_imported = assets::AssetImporter::IsImported(currentSelectedAssetPath);
+			std::string meta_path;
+			is_imported = assets::AssetImporter::IsImported(currentSelectedAssetPath, meta_path);
 			if (is_imported)
 			{
 				if (!assets::AssetImporter::IsMeta(currentSelectedAssetPath))

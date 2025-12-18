@@ -65,7 +65,7 @@ namespace gns
 		GNS_API rendering::Shader* GetShader(guid guid);
 		GNS_API rendering::Shader* GetShader(const std::string& name);
 
-		GNS_API rendering::Texture* CreateTexture(const std::string& texturePath);
+		GNS_API rendering::Texture* CreateTexture(const std::string& texturePath, guid assetHandle = 0);
 		GNS_API void CreateTextureDescriptor(rendering::Texture* texture);
 		GNS_API void UpdateTextureDescriptor(rendering::Texture* texture);
 		GNS_API rendering::Texture* GetTexture(guid guid);

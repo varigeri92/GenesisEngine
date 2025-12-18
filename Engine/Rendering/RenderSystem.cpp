@@ -41,13 +41,16 @@ gns::rendering::Shader* gns::RenderSystem::GetShader(const std::string& name)
 	return Object::Find<rendering::Shader>(name);
 }
 
-gns::rendering::Texture* gns::RenderSystem::CreateTexture(const std::string& texturePath)
+gns::rendering::Texture* gns::RenderSystem::CreateTexture(const std::string& texturePath, guid assetHandle /*=0*/)
 {
     if(!fileUtils::FileExists(texturePath))
         return nullptr;
 
-    guid  guid = hashString(texturePath);
-    rendering::Texture* texture = Object::CreateWithGuid<rendering::Texture>(guid, texturePath, texturePath);
+	guid guid = assetHandle;
+	if(assetHandle == 0)
+		guid = hashString(texturePath);
+
+	rendering::Texture* texture = Object::CreateWithGuid<rendering::Texture>(guid, texturePath, texturePath);
     return texture;
 }
 

@@ -18,11 +18,12 @@ namespace gns::editor::assets
 	{
 	public:
 		static bool ImportAsset(const std::string& filePath, bool reImport = false);
-		static bool IsImported(const std::string& filePath);
+		static bool IsImported(const std::string& filePath, std::string& out_metaPath);
 		static bool IsMeta(const std::string& filePath);
 
 		static void OpenImportWindow(assetLibrary::AssetType type);
 		static AssetMetadata* GetMetadata(const std::string& assetPath);
+		static AssetMetadata* GetMetadata(const gns::guid& assetGuid);
 		static MeshAsset GetMeshAsset(const AssetMetadata& asset_metadata);
 
 		static assetLibrary::AssetType GetAssetType(const std::string& extension);

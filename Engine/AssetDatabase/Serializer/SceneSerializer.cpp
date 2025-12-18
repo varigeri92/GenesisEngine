@@ -9,6 +9,9 @@
 #include "../../Utils/FileSystemUtils.h"
 #include "yaml-cpp/yaml.h"
 #include "SerializationTable.h"
+#include "../../../Editor/AssetManagement/AssetImporter.h"
+#include "../../Utils/PathHelper.h"
+#include "../AssetManagement/AssetDatabase.h"
 
 #define VERSION "0.0.0"
 using namespace gns::serialization;
@@ -263,6 +266,25 @@ void gns::serialization::SceneSerializer::RegisterTable()
 				_value = value.as<gns::guid>();
 		}
 	);
+
+	YamlFieldSerializationEntry::RegisterSerializeableFiled<gns::rendering::Texture>(
+		[](const std::string& name, char* componentData, size_t offset, YAML::Emitter& out)
+		{
+			rendering::Texture* texture = reinterpret_cast<rendering::Texture*>(componentData + offset);
+			guid guid = texture->getGuid();
+			out << YAML::Key << name
+				<< YAML::Value << guid;
+		}, [](char* componentData, size_t offset, YAML::Node& value)
+			{
+				gns::guid guid = value.as<gns::guid>();
+				auto slot = reinterpret_cast<gns::rendering::Texture**>(componentData + offset);
+				gns::rendering::Texture* value_ptr = *slot;
+				gns::RenderSystem* renderSystem = gns::SystemsManager::GetSystem<gns::RenderSystem>();
+				std::string filePath = gns::assets::AssetDatabase::GetDatabaseEntry(guid).filepath; //AssetRegistry::Get(guid).path;
+				gns::rendering::Texture* texture = renderSystem->CreateTexture(gns::PathHelper::FromAssetsRelative(filePath), guid);
+				*slot = texture;
+			}
+			);
 
 	YamlFieldSerializationEntry::RegisterSerializeableFiled<bool>(
 		[](const std::string& name, char* componentData, size_t offset, YAML::Emitter& out)

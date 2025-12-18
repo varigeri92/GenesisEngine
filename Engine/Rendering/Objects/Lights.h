@@ -50,4 +50,14 @@ namespace gns::rendering
 			REGISTER_FIELD(float, intensity);
 		}
 	};
+
+	struct SkyComponent : public ISerializeableComponent
+	{
+		Texture* texture {nullptr};
+		void RegisterFields(ComponentMeta& componentMetaData)
+		{
+			SET_CMP_NAME(SkyComponent);
+			REGISTER_FIELD(Texture, texture);
+		}
+	};
 }

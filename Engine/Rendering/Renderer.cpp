@@ -1,4 +1,4 @@
-﻿#include "gnspch.h"
+#include "gnspch.h"
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_LEFT_HANDED 
 #include "Renderer.h"
@@ -262,6 +262,48 @@ void gns::rendering::Renderer::BuildDrawData()
     m_device->UpdateStorageBuffer(objects.data(), objects.size() * sizeof(ObjectDrawData));
 
     {
+        if (currenthandle == (uint32_t) - 1)
+        {
+			TextureHandle handle = Object::Find<Texture>("white")->handle;
+            SetbgTexture(handle);
+            currenthandle = handle.handle;
+        }
+
+    	SkyLight sky_light = {};
+        auto skyLight_view = SystemsManager::GetRegistry()
+            .view<gns::entity::EntityComponent,
+            gns::entity::Transform,
+            gns::rendering::LightComponent,
+            gns::rendering::SkyComponent,
+            gns::rendering::ColorComponent>();
+        for (auto [entt, entity, transform, light, skyComp, color] : skyLight_view.each())
+        {
+            if (!entity.active)
+                continue;
+            globalUniform.pointLight_count++;
+            glm::vec3 forward = {
+               cosf(transform.rotation.x) * sinf(transform.rotation.y),
+               sinf(transform.rotation.x),
+               cosf(transform.rotation.x) * cosf(transform.rotation.y)
+            };
+            sky_light.direction = { forward.x, forward.y, forward.z, transform.rotation.y };
+            sky_light.color = { color.color.r, color.color.g, color.color.b, light.intensity};
+            Texture* hdr_texture = skyComp.texture;
+            if(hdr_texture)
+            {
+	            if(hdr_texture->handle.handle != currenthandle)
+	            {
+					SetbgTexture(hdr_texture->handle);
+                    currenthandle = hdr_texture->handle.handle;
+	            }
+            }
+        }
+        glm::mat4 invProj = glm::inverse(globalUniform.proj);
+        glm::mat4 invViewRot = glm::inverse(globalUniform.view);
+        m_device->UpdateSkyLightBuffer(&sky_light, sizeof(SkyLight), invProj, invViewRot, sky_light.color, sky_light.direction.w);
+    }
+
+    {
 	    auto pointLight_view = SystemsManager::GetRegistry()
 		.view<gns::entity::EntityComponent,
 			gns::entity::Transform,
@@ -358,7 +400,7 @@ void gns::rendering::Renderer::BuildDrawData()
 
 void gns::rendering::Renderer::CreatePipelineForShader(Shader* shader)
 {
-    if (nullptr != Object::Get<Shader>(shader->m_guid))
+    if (nullptr != Object::Get<Shader>(shader->getGuid()))
     {
         auto [handle, vkShader] = m_device->CreateShader();
         shader->handle = handle;
@@ -366,7 +408,7 @@ void gns::rendering::Renderer::CreatePipelineForShader(Shader* shader)
     }
     else
     {
-        LOG_INFO("shader: " + std::to_string(shader->m_guid) + " already has a pipeline created");
+        LOG_INFO("shader: " + std::to_string(shader->getGuid()) + " already has a pipeline created");
     }
 }
 
