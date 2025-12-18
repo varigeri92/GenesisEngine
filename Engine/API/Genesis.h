@@ -8,7 +8,7 @@
 #include "../Object/Object.h"
 #include "../Object/Guid.h"
 
-#include "../AssetDatabase/AssetMetadata.h"
+#include "../AssetDatabase/AssetRegistry.h"
 #include "../Scene/Scene.h"
 #include "../Scene/SceneManager.h"
 

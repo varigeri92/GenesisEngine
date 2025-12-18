@@ -10,12 +10,12 @@
 #include "../ECS/Component.h"
 #include "../Utils/FileSystemUtils.h"
 #define STB_IMAGE_IMPLEMENTATION
-#include "AssetMetadata.h"
+#include "AssetRegistry.h"
 #include "stb_image.h"
 #include "../Utils/PathHelper.h"
 
-std::unordered_map<gns::guid, gns::RuntimeAsset> gns::AssetRegistry::sRegistry = {};
-gns::RuntimeAsset gns::AssetRegistry::sInvalidAssetEntry = {};
+std::unordered_map<gns::guid, gns::assets::AssetInfo> gns::assets::AssetRegistry::sRegistry = {};
+gns::assets::AssetInfo gns::assets::AssetRegistry::sInvalidAssetEntry = {};
 
 namespace gns::assetLibrary
 {

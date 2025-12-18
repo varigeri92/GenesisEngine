@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
 {
 	SetArguments(argc, argv);
 	gns::editor::assets::AssetLibrary::ScanAssetLibrary();
-	gns::AssetRegistry::ListAssets();
+	gns::assets::AssetRegistry::ListAssets();
 	gns::Engine engine;
 	engine.InitEngine(PROJECT_NAME, PathManager::AssetsPath, PathManager::ResourcesPath);
 	engine.OnEngineStart([&](){

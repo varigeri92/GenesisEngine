@@ -1,5 +1,7 @@
 ﻿#pragma once
 #include "Genesis.h"
+#include "AssetMetadata.h"
+ 
 
 namespace gns::editor::assets
 {

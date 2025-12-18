@@ -1,6 +1,7 @@
 #pragma once
 #include <unordered_map>
 #include "Genesis.h"
+#include "AssetMetadata.h"
 
 namespace gns::editor::assets
 {

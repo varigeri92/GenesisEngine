@@ -1,27 +1,32 @@
 ﻿#pragma once
 #include "../Object/Guid.h"
 
-namespace gns
+namespace gns::assets
 {
-	struct RuntimeAsset{
-		size_t assetId = static_cast<size_t>(-1);
-		std::string path = {};
+	enum class AssetKind { Invalid, Source, Baked };
+	struct AssetInfo
+	{
+		AssetKind assetKind{ AssetKind::Invalid };
+		guid assetGuid;
+		std::string filePath{};
+		size_t offset{0};
+		size_t size{0};
 	};
-
 	class AssetRegistry
 	{
 	private:
-		GNS_API static RuntimeAsset sInvalidAssetEntry;
-		GNS_API static std::unordered_map<guid, RuntimeAsset> sRegistry;
+		GNS_API static AssetInfo sInvalidAssetEntry;
+		GNS_API static std::unordered_map<guid, AssetInfo> sRegistry;
 	public:
-		static const RuntimeAsset& Get(guid guid)
+		static const AssetInfo& Get(guid guid)
 		{
 			if(sRegistry.contains(guid))
 				return sRegistry[guid];
+
 			return sInvalidAssetEntry;
 		}
 
-		static void Add(guid guid, RuntimeAsset asset)
+		static void Add(guid guid, AssetInfo asset)
 		{
 			if(sRegistry.contains(guid))
 			{
@@ -34,11 +39,15 @@ namespace gns
 		{
 			for (auto& it : sRegistry) {
 				// Do stuff
-				LOG_INFO(it.second.path);
+				LOG_INFO(it.second.filePath);
 			}
 		}
 	};
 
+}
+
+namespace gns
+{
 	struct Material
 	{
 		guid asset_guid;
@@ -59,14 +68,5 @@ namespace gns
 		std::string asset_name;
 		std::string src_path;
 		std::vector<AssetSubmesh> sub_meshes;
-	};
-	struct AssetMetadata
-	{
-		guid assetGuid;
-		std::string assetName;
-		std::string srcPath;
-		assetLibrary::AssetType assetType;
-
-		std::unordered_map<guid, AssetMetadata> sub_assets;
 	};
 }

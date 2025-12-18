@@ -122,7 +122,11 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
     }
 
     if(import_result)
-		AssetRegistry::Add(guid, { .assetId = guid, .path = PathManager::AssetsPath + relative_path });
+	    gns::assets::AssetRegistry::Add(guid, {
+			gns::assets::AssetKind::Source, guid,
+	    	PathManager::AssetsPath + relative_path,
+            0,0
+	    });
 
 	return import_result;
 }

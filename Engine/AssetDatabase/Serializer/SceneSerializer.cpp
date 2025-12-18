@@ -363,8 +363,8 @@ void SceneSerializer::ProcessSceneReferences(gns::scene::Scene* scene)
 		gns::entity::MeshComponent* meshComp;
 		if(entity.TryGetComponent<gns::entity::MeshComponent>(meshComp))
 		{
-			RuntimeAsset runtimeAsset = AssetRegistry::Get(meshComp->meshAsset);
-			MeshAsset meshAsset = GetMeshAsset(runtimeAsset.path);
+			assets::AssetInfo assetInfo = assets::AssetRegistry::Get(meshComp->meshAsset);
+			MeshAsset meshAsset = GetMeshAsset(assetInfo.filePath);
 			assetLibrary::LoadMeshAsset(meshAsset, 
 				[&](const std::vector<guid>& loadedMeshes, const std::vector<guid>& loadedMaterials)
 			{
