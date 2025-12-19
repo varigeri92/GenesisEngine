@@ -52,7 +52,7 @@ std::unordered_map<size_t, std::function<void(const std::string& name, void* com
 					if (gns::editor::assets::AssetImporter::ImportAsset(payload_string, false))
 					{
 						gns::AssetMetadata* metadata_ptr = gns::editor::assets::AssetImporter::GetMetadata(payload_string);
-						if (metadata_ptr->assetType == gns::assetLibrary::AssetType::Texture)
+						if (metadata_ptr->assetType == gns::assets::AssetType::Texture)
 						{
 							gns::RenderSystem* renderSystem = gns::SystemsManager::GetSystem<gns::RenderSystem>();
 							gns::rendering::Texture* texture = renderSystem->CreateTexture(PathManager::FromAssetsRelative(metadata_ptr->srcPath));
@@ -315,7 +315,7 @@ void gns::editor::gui::InspectorWindow::DrawInspectedEntity()
 							if (assets::AssetImporter::ImportAsset(payload_string, false))
 							{
 								AssetMetadata* metadata_ptr = assets::AssetImporter::GetMetadata(payload_string);
-								if (metadata_ptr->assetType == assetLibrary::AssetType::Texture)
+								if (metadata_ptr->assetType == gns::assets::AssetType::Texture)
 								{
 									rendering::Texture* texture = renderSystem->CreateTexture(PathManager::FromAssetsRelative(metadata_ptr->srcPath));
 									currentSelectedEntityMaterial->textures[i] = texture;
@@ -390,7 +390,7 @@ void gns::editor::gui::InspectorWindow::DrawInspectedAsset()
 			ImGui::TableSetupColumn("##", ImGuiTableColumnFlags_WidthFixed, label_width);
 			ImGui::TableSetupColumn("##", ImGuiTableColumnFlags_WidthFixed, available_Width - label_width);
 
-			if(assetMetadata->assetType == assetLibrary::AssetType::Mesh)
+			if(assetMetadata->assetType == gns::assets::AssetType::Mesh)
 			{
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();

@@ -89,8 +89,8 @@ namespace gns::rendering
 		friend struct gns::rendering::VulkanBuffer;
 		friend struct gns::rendering::VulkanImage;
 		friend class gns::rendering::Renderer;
-		friend class gns::rendering::VulkanShader;
-		friend class gns::rendering::Texture;
+		friend struct gns::rendering::VulkanShader;
+		friend struct gns::rendering::Texture;
 	public:
 		Device(Screen* screen);
 		~Device();

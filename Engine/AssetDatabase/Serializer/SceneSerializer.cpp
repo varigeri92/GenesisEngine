@@ -365,7 +365,7 @@ void SceneSerializer::ProcessSceneReferences(gns::scene::Scene* scene)
 		{
 			assets::AssetInfo assetInfo = assets::AssetRegistry::Get(meshComp->meshAsset);
 			MeshAsset meshAsset = GetMeshAsset(assetInfo.filePath);
-			assetLibrary::LoadMeshAsset(meshAsset, 
+			assets::LoadMeshAsset(meshAsset, 
 				[&](const std::vector<guid>& loadedMeshes, const std::vector<guid>& loadedMaterials)
 			{
 				for (size_t i = 0; i < loadedMeshes.size(); i++)

@@ -10,7 +10,7 @@
 gns::rendering::Texture::Texture(const std::string& name, const std::string& path)
 	: Object(name)
 {
-	assetLibrary::LoadTexture(path, *this, &hdr);
+	assets::LoadTexture(path, *this, &hdr);
 	CreateTexture(data, width, height, mipLevels, false);
 	free(data);
 }

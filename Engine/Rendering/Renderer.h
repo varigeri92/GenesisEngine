@@ -54,9 +54,9 @@ namespace gns::rendering
 	{
 		uint32_t shadowMapSize{ 1024 };
 		uint32_t pcf_kernelSize{ 3 };
-		float normalOffset{ 0.00100 };
-		float shadowBias{ 0.30000 };
-		float slopeScale{ 0.00100 };
+		float normalOffset{ 0.00100f };
+		float shadowBias{ 0.30000f };
+		float slopeScale{ 0.00100f };
 		float halfExtent{ 10.00000f };
 		float nearPlane{ 1.f };
 		float farPlane{ 1000.f };
@@ -65,7 +65,7 @@ namespace gns::rendering
 	class Renderer
 	{
 		friend class  gns::RenderSystem;
-		friend class gns::rendering::Texture;
+		friend struct gns::rendering::Texture;
 
 	public:
 		Renderer(Screen* screen);

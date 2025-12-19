@@ -211,7 +211,7 @@ void gns::editor::gui::ContentBrowser::DrawContentView(DirectoryEntry& entry)
 
 	ImGuiStyle& style = ImGui::GetStyle();
 	const ImVec2 button_sz(80* iconSize, (80 * iconSize)+ 20);
-	const int buttons_count = entry.content.size();
+	const size_t buttons_count = entry.content.size();
 	const float window_visible_x2 = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;
 	for (int i = 0; i < buttons_count; i++)
 	{
@@ -228,25 +228,25 @@ void gns::editor::gui::ContentBrowser::DrawContentView(DirectoryEntry& entry)
 		{
 			switch (entry.content[i].assetType)
 			{
-			case assetLibrary::AssetType::None:
+			case gns::assets::AssetType::None:
 				spriteIndex = 1;
 				break;
-			case assetLibrary::AssetType::Mesh:
+			case gns::assets::AssetType::Mesh:
 				spriteIndex = 2;
 				break;
-			case assetLibrary::AssetType::Texture:
+			case gns::assets::AssetType::Texture:
 				spriteIndex = 4;
 				break;
-			case assetLibrary::AssetType::Sound:
+			case gns::assets::AssetType::Sound:
 				spriteIndex = 3;
 				break;
-			case assetLibrary::AssetType::Material:
+			case gns::assets::AssetType::Material:
 				spriteIndex = 5;
 				break;
-			case assetLibrary::AssetType::Shader:
+			case gns::assets::AssetType::Shader:
 				spriteIndex = 5;
 				break;
-			case assetLibrary::AssetType::Compute:
+			case gns::assets::AssetType::Compute:
 				spriteIndex = 5;
 				break;
 			default:

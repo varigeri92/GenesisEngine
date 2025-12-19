@@ -1,4 +1,6 @@
-﻿#include "PathManager.h"
+﻿#include <format>
+
+#include "PathManager.h"
 #include "../Engine/Engine.h"
 #include "../Engine/Rendering/GuiWindowDrawer.h"
 #include "AssetManagement/AssetImporter.h"
@@ -157,7 +159,7 @@ void SetArguments(int argc, char* argv[])
 			if (i + 1 < argc)
 				SetProjectArguments(argv[i], argv[i + 1]);
 			else
-				LOG_ERROR("Missing argument value for: {}", argv[i]);
+				LOG_ERROR(std::format("MIssing argument value: {}", argv[i]));
 		}
 	}
 	else

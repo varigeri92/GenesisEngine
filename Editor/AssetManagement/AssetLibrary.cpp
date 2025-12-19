@@ -41,7 +41,7 @@ void gns::editor::assets::AssetLibrary::ScanAssetLibrary()
 			guid,
 			metaNode["asset_name"].as<std::string>(),
 			metaNode["src_path"].as<std::string>(),
-			static_cast<assetLibrary::AssetType>(metaNode["asset_type"].as<uint32_t>())
+			static_cast<gns::assets::AssetType>(metaNode["asset_type"].as<uint32_t>())
 		};
 		gns::assets::AssetRegistry::Add(guid, {
 			gns::assets::AssetKind::Source,

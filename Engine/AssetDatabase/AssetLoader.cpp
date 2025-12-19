@@ -17,7 +17,7 @@
 std::unordered_map<gns::guid, gns::assets::AssetInfo> gns::assets::AssetRegistry::sRegistry = {};
 gns::assets::AssetInfo gns::assets::AssetRegistry::sInvalidAssetEntry = {};
 
-namespace gns::assetLibrary
+namespace gns::assets
 {
 struct AssetImportOptions
 {
@@ -155,7 +155,7 @@ void LoadMeshAsset(const MeshAsset& mesh_asset, const std::function<void(const s
                 newMesh->biTangents.push_back({ mesh->mBitangents[v].x, mesh->mBitangents[v].y, mesh->mBitangents[v].z });
             }
         }
-        const uint32_t startindex = newMesh->indices.size();
+        const size_t startindex = newMesh->indices.size();
         for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
             const aiFace& Face = mesh->mFaces[i];
             for (uint32_t i = 0; i < Face.mNumIndices; i++)

@@ -13,7 +13,7 @@
 
 #include "yaml-cpp/yaml.h"
 
-namespace gns::assetLibrary
+namespace gns::assets
 {
 std::unordered_map<std::string, AssetType> fileExtensionAssetTypeMap = {
     {"", AssetType::None},
@@ -103,20 +103,20 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
     }
     bool import_result = false;
     switch (AssetLibrary::assetDatabase[guid].assetType) {
-    case assetLibrary::AssetType::None:
+    case gns::assets::AssetType::None:
 	    break;
-    case assetLibrary::AssetType::Mesh:
+    case gns::assets::AssetType::Mesh:
         import_result = ImportMesh(relative_path, {}, guid);
 	    break;
-    case assetLibrary::AssetType::Texture:
+    case gns::assets::AssetType::Texture:
 	    break;
-    case assetLibrary::AssetType::Sound:
+    case gns::assets::AssetType::Sound:
 	    break;
-    case assetLibrary::AssetType::Material:
+    case gns::assets::AssetType::Material:
 	    break;
-    case assetLibrary::AssetType::Shader:
+    case gns::assets::AssetType::Shader:
 	    break;
-    case assetLibrary::AssetType::Compute:
+    case gns::assets::AssetType::Compute:
 	    break;
     default: ;
     }
@@ -154,7 +154,7 @@ bool gns::editor::assets::AssetImporter::IsMeta(const std::string& filePath)
     return false;
 }
 
-void gns::editor::assets::AssetImporter::OpenImportWindow(assetLibrary::AssetType type)
+void gns::editor::assets::AssetImporter::OpenImportWindow(gns::assets::AssetType type)
 {
 
 }
@@ -188,7 +188,7 @@ gns::AssetMetadata* gns::editor::assets::AssetImporter::GetMetadata(const std::s
             asset_guid,
             metaFile["asset_name"].as<std::string>(),
             metaFile["src_path"].as<std::string>(),
-            static_cast<assetLibrary::AssetType>(metaFile["asset_type"].as<uint32_t>())
+            static_cast<gns::assets::AssetType>(metaFile["asset_type"].as<uint32_t>())
         };
         return &AssetLibrary::assetDatabase[asset_guid];
     }
@@ -209,12 +209,12 @@ gns::MeshAsset gns::editor::assets::AssetImporter::GetMeshAsset(const AssetMetad
     return asset;
 }
 
-gns::assetLibrary::AssetType gns::editor::assets::AssetImporter::GetAssetType(const std::string& extension)
+gns::assets::AssetType gns::editor::assets::AssetImporter::GetAssetType(const std::string& extension)
 {
-	if (assetLibrary::fileExtensionAssetTypeMap.contains(extension))
-	    return assetLibrary::fileExtensionAssetTypeMap[extension];
+	if (gns::assets::fileExtensionAssetTypeMap.contains(extension))
+	    return gns::assets::fileExtensionAssetTypeMap[extension];
 
-	return assetLibrary::AssetType::None;
+	return gns::assets::AssetType::None;
 }
 
 bool gns::editor::assets::AssetImporter::ImportMesh(std::string file_path, MeshImportOptions options, guid guid)

@@ -70,8 +70,8 @@ namespace gns
 				frameInput.mouseHeld[event.button.button] = false;
 				break;
 			case SDL_MOUSEMOTION:
-				mousePos.x = event.motion.x;
-				mousePos.y = event.motion.y;
+				mousePos.x = static_cast<float>(event.motion.x);
+				mousePos.y = static_cast<float>(event.motion.y);
 				mouseVelocity.x = event.motion.xrel;
 				mouseVelocity.y = event.motion.yrel;
 				break;

@@ -38,7 +38,7 @@ namespace gns
 
 	class RenderSystem final : public gns::SystemBase
 	{
-		friend class gns::rendering::Texture;
+		friend struct gns::rendering::Texture;
 	private:
 		gns::rendering::Renderer* m_renderer;
 		rendering::Camera* m_camera;

@@ -3,7 +3,7 @@
 #include "api.h"
 #include "glm/glm.hpp"
 
-typedef union SDL_Event;
+union SDL_Event;
 
 namespace gns
 {

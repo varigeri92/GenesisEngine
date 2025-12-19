@@ -6,7 +6,7 @@ namespace gns::scene
 
 	class SceneManager
 	{
-		friend class Entity;
+		friend struct Entity;
 
 		static Scene* sActiveScene;
 	public:

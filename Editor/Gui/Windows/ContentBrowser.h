@@ -16,7 +16,7 @@ namespace gns::editor::gui
 			std::vector<DirectoryEntry> content;
 			bool isSelected;
 			size_t entryId;
-			assetLibrary::AssetType assetType;
+			gns::assets::AssetType assetType;
 		};
 
 		std::unordered_map<std::string, DirectoryEntry*> entryMap;
