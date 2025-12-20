@@ -48,7 +48,7 @@ namespace gns
 	{
 		auto* renderSystem = SystemsManager::RegisterSystem<RenderSystem>(defaultScreen);
 
-		scene::SceneManager::CreateScene("Sponza_Scene");
+		scene::SceneManager::CreateScene("Default Scene");
 		callback();
 	}
 

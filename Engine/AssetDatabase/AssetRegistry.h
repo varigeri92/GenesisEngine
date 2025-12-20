@@ -1,13 +1,20 @@
 ﻿#pragma once
 #include "../Object/Guid.h"
+#include "../Utils/Logger.h"
 
 namespace gns::assets
 {
+	enum class AssetType
+	{
+		None, Mesh, Texture, Sound, Material, Shader, Compute
+	};
 	enum class AssetKind { Invalid, Source, Baked };
 	struct AssetInfo
 	{
 		AssetKind assetKind{ AssetKind::Invalid };
+		AssetType AssetType{ AssetType::None };
 		guid assetGuid;
+		std::string name;
 		std::string filePath{};
 		size_t offset{0};
 		size_t size{0};
@@ -43,30 +50,29 @@ namespace gns::assets
 			}
 		}
 	};
-
-}
-
-namespace gns
-{
-	struct Material
+	struct AssetDescriptionHeader
 	{
-		guid asset_guid;
-		std::string asset_name;
+		guid assetGuid;
+		std::string assetName;
+	};
+
+	struct MaterialAssetDescription
+	{
+		AssetDescriptionHeader assetHeader;
 		std::string vert_shader_path;
 		std::string frag_shader_path;
 	};
 
-	struct AssetSubmesh
+	struct SubMesh
 	{
 		uint32_t mesh_index;
 		guid mesh_guid;
 	};
 
-	struct MeshAsset
+	struct MeshAssetDescription
 	{
-		guid asset_guid;
-		std::string asset_name;
+		AssetDescriptionHeader assetHeader;
 		std::string src_path;
-		std::vector<AssetSubmesh> sub_meshes;
+		std::vector<SubMesh> sub_meshes;
 	};
 }

@@ -44,8 +44,8 @@ void gns::editor::assets::AssetLibrary::ScanAssetLibrary()
 			static_cast<gns::assets::AssetType>(metaNode["asset_type"].as<uint32_t>())
 		};
 		gns::assets::AssetRegistry::Add(guid, {
-			gns::assets::AssetKind::Source,
-			guid,
+			gns::assets::AssetKind::Source, assetDatabase[guid].assetType,
+			guid, assetDatabase[guid].assetName,
 			PathManager::AssetsPath + assetDatabase[guid].srcPath,
 		0,0}
 		);

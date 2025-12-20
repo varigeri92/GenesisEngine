@@ -334,7 +334,7 @@ void gns::serialization::SceneSerializer::RegisterTable()
 }
 
 
-gns::MeshAsset GetMeshAsset(const std::string& filePath)
+gns::assets::MeshAssetDescription GetMeshAsset(const std::string& filePath)
 {
 	std::string path = filePath;
 	if(!gns::fileUtils::HasFileExtension(filePath, "gnsMesh"))
@@ -342,7 +342,7 @@ gns::MeshAsset GetMeshAsset(const std::string& filePath)
 		path = filePath + ".gnsMesh";
 	}
 	YAML::Node meshAssetFile = YAML::LoadFile(path);
-	gns::MeshAsset asset = {
+	gns::assets::MeshAssetDescription asset = {
 		meshAssetFile["asset_guid"].as<uint64_t>(),
 		meshAssetFile["asset_name"].as<std::string>(),
 		meshAssetFile["file_path"].as<std::string>(), {} };
@@ -364,7 +364,7 @@ void SceneSerializer::ProcessSceneReferences(gns::scene::Scene* scene)
 		if(entity.TryGetComponent<gns::entity::MeshComponent>(meshComp))
 		{
 			assets::AssetInfo assetInfo = assets::AssetRegistry::Get(meshComp->meshAsset);
-			MeshAsset meshAsset = GetMeshAsset(assetInfo.filePath);
+			gns::assets::MeshAssetDescription meshAsset = GetMeshAsset(assetInfo.filePath);
 			assets::LoadMeshAsset(meshAsset, 
 				[&](const std::vector<guid>& loadedMeshes, const std::vector<guid>& loadedMaterials)
 			{

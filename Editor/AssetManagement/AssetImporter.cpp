@@ -67,19 +67,23 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
         else
             return true;
     }
-
+    gns::assets::AssetType assetType = assets::AssetImporter::GetAssetType(fileUtils::GetFileExtension(relative_path));
     AssetLibrary::assetDatabase[guid] = {
         .assetGuid = guid,
         .assetName = fileUtils::GetFileNameFromPath(relative_path),
         .srcPath = relative_path,
-        .assetType = assets::AssetImporter::GetAssetType(fileUtils::GetFileExtension(relative_path))
+        .assetType = assetType
     };
+    std::string Extension = "";
+
+    if (assetType == gns::assets::AssetType::Mesh)
+        Extension = ".gnsMesh";
 
     YAML::Emitter meta_yaml;
     meta_yaml << YAML::BeginMap
         << "asset_guid" << AssetLibrary::assetDatabase[guid].assetGuid
         << "asset_name" << AssetLibrary::assetDatabase[guid].assetName
-        << "src_path" << AssetLibrary::assetDatabase[guid].srcPath
+        << "src_path" << AssetLibrary::assetDatabase[guid].srcPath + Extension
         << "asset_type" << static_cast<uint32_t>(AssetLibrary::assetDatabase[guid].assetType) << YAML::EndMap;
     std::string meta_filePath = relative_path + ".meta";
     
@@ -123,7 +127,7 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
 
     if(import_result)
 	    gns::assets::AssetRegistry::Add(guid, {
-			gns::assets::AssetKind::Source, guid,
+			gns::assets::AssetKind::Source, AssetLibrary::assetDatabase[guid].assetType, guid,  AssetLibrary::assetDatabase[guid].assetName,
 	    	PathManager::AssetsPath + relative_path,
             0,0
 	    });
@@ -194,10 +198,10 @@ gns::AssetMetadata* gns::editor::assets::AssetImporter::GetMetadata(const std::s
     }
 }
 
-gns::MeshAsset gns::editor::assets::AssetImporter::GetMeshAsset(const AssetMetadata& asset_metadata)
+gns::assets::MeshAssetDescription gns::editor::assets::AssetImporter::GetMeshAsset(const AssetMetadata& asset_metadata)
 {
     YAML::Node meshAssetFile = YAML::LoadFile(PathManager::FromAssetsRelative(asset_metadata.srcPath) + ".gnsMesh");
-    MeshAsset asset = {meshAssetFile["asset_guid"].as<uint64_t>(),
+    gns::assets::MeshAssetDescription asset = {meshAssetFile["asset_guid"].as<uint64_t>(),
     meshAssetFile["asset_name"].as<std::string>(),
     meshAssetFile["file_path"].as<std::string>(), {}};
 
@@ -256,7 +260,7 @@ bool gns::editor::assets::AssetImporter::ImportMesh(std::string file_path, MeshI
 
 
 	    std::string assetname = fileUtils::GetFileNameFromPath(file_path);
-	    MeshAsset meshAsset{guid, assetname , file_path, {}};
+        gns::assets::MeshAssetDescription meshAsset{guid, assetname , file_path, {}};
 	    std::vector<gns::guid> materialGuids = {};
 	    if (scene->HasMaterials() && options.import_materials)
 	    {
@@ -278,7 +282,7 @@ bool gns::editor::assets::AssetImporter::ImportMesh(std::string file_path, MeshI
 	    out << "asset_name" << assetname;
 	    out << "file_path" << file_path;
 	    out << "sub_meshes" << YAML::BeginSeq;
-	    for (AssetSubmesh subMesh : meshAsset.sub_meshes)
+	    for (gns::assets::SubMesh subMesh : meshAsset.sub_meshes)
 	    {
 	        out << YAML::BeginMap;
 	        out << "mesh_index" << subMesh.mesh_index;

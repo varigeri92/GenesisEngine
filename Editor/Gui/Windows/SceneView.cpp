@@ -10,6 +10,8 @@
 #include "../../AssetManagement/AssetImporter.h"
 #include <vector>
 
+#include "../../../Engine/AssetDatabase/AssetManager.h"
+
 void decomposeMatrix(const glm::mat4& matrix, glm::vec3& scale, glm::quat& rotation, glm::vec3& translation) {
 	glm::vec3 skew;
 	glm::vec4 perspective;
@@ -18,7 +20,7 @@ void decomposeMatrix(const glm::mat4& matrix, glm::vec3& scale, glm::quat& rotat
 
 void gns::editor::gui::SceneView::CreateMesh(AssetMetadata* metaData)
 {
-	const MeshAsset meshAsset = assets::AssetImporter::GetMeshAsset(*metaData);
+	const gns::assets::MeshAssetDescription meshAsset = assets::AssetImporter::GetMeshAsset(*metaData);
 	Entity entity = Entity::CreateEntity(metaData->assetName);
 	entity::MeshComponent& mesh_cmp = entity.AddComponet<entity::MeshComponent>();
 	mesh_cmp.meshAsset = metaData->assetGuid;
@@ -95,17 +97,20 @@ void gns::editor::gui::SceneView::OnWindowDraw()
 		{
 			const std::string& payload_string = *static_cast<std::string*>(payload->Data);
 			LOG_INFO(payload_string);
+			//...
 			if(assets::AssetImporter::ImportAsset(payload_string, false))
 			{
 				AssetMetadata* metadata_ptr = assets::AssetImporter::GetMetadata(payload_string);
 				if (metadata_ptr->assetType == gns::assets::AssetType::Mesh)
 				{
-					CreateMesh(metadata_ptr);
+					{
+						const gns::assets::AssetInfo& info = gns::assets::AssetRegistry::Get(metadata_ptr->assetGuid);
+						gns::assets::AssetManager::LoadAsset(info);
+					}
+					//CreateMesh(metadata_ptr);
 				}
-			}else
-			{
-				LOG_INFO("Asset already imported!");
 			}
+			//...
 		}
 		ImGui::EndDragDropTarget();
 	}

@@ -12,6 +12,7 @@
 #include "Shader.h"
 #include "../Utils/FileSystemUtils.h"
 #include "../Window/Screen.h"
+#include "../AssetDatabase/AssetManager.h"
 
 
 void gns::RenderSystem::SetActiveCamera(rendering::Camera* camera, entity::Transform* transform)
@@ -140,9 +141,9 @@ void gns::RenderSystem::ResetMaterialTextures(rendering::Material* material)
     material->textures[4] = emissionTexture;
 }
 
-void gns::RenderSystem::UploadMesh(rendering::Mesh* mesh, uint32_t startIndex, uint32_t count)
+void gns::RenderSystem::UploadMesh(rendering::Mesh* mesh)
 {
-    m_renderer->UploadMesh(mesh, startIndex, count);
+    m_renderer->UploadMesh(mesh, mesh->bufferRange.startIndex, mesh->bufferRange.indexCount);
 }
 
 ImTextureID gns::RenderSystem::GetImGuiTexture(TextureHandle handle)
@@ -186,6 +187,37 @@ void gns::RenderSystem::InitSystem()
     {
         LOG_ERROR("Could not find RT texture!");
     }
+
+    EventListener_T<gns::assets::AssetManager::AssetLoadedEvent> loadedEvent{
+        [&](gns::assets::AssetManager::AssetLoadedEvent evt)
+    {
+        LOG_INFO("Asset Loaded:");
+        LOG_INFO("GUID ->" + std::to_string(evt.loadedAsset));
+        LOG_INFO("TYPE ->" + std::to_string(static_cast<uint32_t>(evt.assetType)));
+            if (evt.assetType == gns::assets::AssetType::Mesh)
+            {
+                gns::rendering::Mesh* loadedMesh = static_cast<gns::rendering::Mesh*>(evt.rawData[0]);
+                gns::rendering::Material* loadedMaterial = static_cast<gns::rendering::Material*>(evt.rawData[1]);
+                entity::MeshComponent& mesh_component = *static_cast<gns::entity::MeshComponent*>(evt.component_ptr);
+                UploadMesh(loadedMesh);
+                mesh_component.meshes.push_back(loadedMesh);
+                mesh_component.materials.push_back(loadedMaterial);
+            }
+
+    } };
+
+    EventListener_T<gns::assets::AssetManager::AssetLoadFailedEvent> loadFailedEvent{
+        [&](gns::assets::AssetManager::AssetLoadFailedEvent evt)
+    {
+        LOG_ERROR("Asset Load FAILED:");
+        LOG_ERROR("GUID ->" + std::to_string(evt.assetGuid));
+        LOG_ERROR("NAME ->" + evt.assetName);
+        LOG_ERROR("MSG ->" + evt.message);
+    } };
+
+    gns::assets::AssetManager::OnAssetLoadedEvent.AddListener(loadedEvent);
+    gns::assets::AssetManager::OnAssetLoadFailedEvent.AddListener(loadFailedEvent);
+
 }
 bool keep_aspect = true;
 float aspect = (float)16 / (float)9;

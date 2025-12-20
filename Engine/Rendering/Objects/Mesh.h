@@ -6,6 +6,11 @@
 
 namespace gns::rendering
 {
+	struct IndexBufferRange
+	{
+		uint32_t startIndex;
+		uint32_t indexCount;
+	};
 	struct Mesh : public Object
 	{
 		friend class Object;
@@ -20,8 +25,9 @@ namespace gns::rendering
 		std::vector<glm::vec4> colors = {};
 		std::vector<glm::vec3> tangents = {};
 		std::vector<glm::vec3> biTangents = {};
-
+		IndexBufferRange bufferRange{ 0,0 };
 		MeshHandle handle;
+
 
 	protected:
 		//Use Object::Create<Mesh>(name) instead!

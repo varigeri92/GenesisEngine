@@ -1,7 +1,7 @@
 ﻿#include "gnspch.h"
 #include "SceneManager.h"
-
 #include "../ECS/Component.h"
+#include "../Rendering/Objects/Lights.h"
 
 std::vector<gns::scene::Scene> gns::scene::SceneManager::LoadedScenes = {};
 gns::scene::Scene* gns::scene::SceneManager::sActiveScene = nullptr;
@@ -36,9 +36,7 @@ gns::scene::Scene* gns::scene::SceneManager::CreateScene(const std::string& name
 	matrix = glm::scale(matrix, transform.scale);
 	glm::quat quaternion = glm::quat(transform.rotation);
 	matrix *= glm::toMat4(quaternion);
-
 	transform.matrix = matrix;
-
 
 	const entityHandle root_handle = registry.create();
 	registry.emplace<entity::EntityComponent>(root_handle, name);
@@ -48,8 +46,26 @@ gns::scene::Scene* gns::scene::SceneManager::CreateScene(const std::string& name
 
 	Entity root_entity = { root_handle };
 	root_entity.GetComponent<entity::Parent>().parent = hidden_root_handle;
-
 	scene->sceneRootEntity = root_handle;
+
+	Entity dirLightEntity = Entity::CreateEntity("Directional Light");
+	dirLightEntity.AddComponet<gns::rendering::LightComponent>();
+	dirLightEntity.AddComponet<gns::rendering::ColorComponent>();
+	entity::Transform& dirLightEntity_transform = dirLightEntity.GetComponent<entity::Transform>();
+	dirLightEntity_transform.rotation = { -(glm::pi<float>() / 4.f), -(glm::pi<float>() /4.f), 0.f };
+
+	Entity pointLight = Entity::CreateEntity("PointLight");
+	pointLight.AddComponet<gns::rendering::LightComponent>();
+	pointLight.AddComponet<gns::rendering::PointLightComponent>();
+	pointLight.AddComponet<gns::rendering::ColorComponent>();
+	entity::Transform& plt = pointLight.GetComponent<entity::Transform>();
+	plt.position = { -2.487f, 1.231f, -1.114f};
+
+	Entity sky =  Entity::CreateEntity("SkyLight");
+	sky.AddComponet<gns::rendering::LightComponent>();
+	sky.AddComponet<gns::rendering::ColorComponent>();
+	sky.AddComponet<gns::rendering::SkyComponent>();
+
 	return scene;
 }
 
