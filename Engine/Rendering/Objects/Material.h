@@ -24,7 +24,7 @@ namespace gns::rendering
 
 	struct MaterialUniformData
 	{
-		MaterialUniformData() :albedoColor(1, 1, 1, 1), metallic_roughness_AO(0, 0.5, 1, 1) {};
+		MaterialUniformData() :albedoColor(1, 1, 1, 1), metallic_roughness_AO(0, 0.5, 1, 0) {};
 		glm::vec4 albedoColor;
 		glm::vec4 metallic_roughness_AO;
 	};

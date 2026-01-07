@@ -48,16 +48,21 @@ std::unordered_map<size_t, std::function<void(const std::string& name, void* com
 				{
 					const std::string& payload_string = *static_cast<std::string*>(payload->Data);
 					LOG_INFO(payload_string);
-
 					if (gns::editor::assets::AssetImporter::ImportAsset(payload_string, false))
 					{
 						gns::AssetMetadata* metadata_ptr = gns::editor::assets::AssetImporter::GetMetadata(payload_string);
 						if (metadata_ptr->assetType == gns::assets::AssetType::Texture)
 						{
-							gns::RenderSystem* renderSystem = gns::SystemsManager::GetSystem<gns::RenderSystem>();
-							gns::rendering::Texture* _texture = renderSystem->CreateTexture(PathManager::FromAssetsRelative(metadata_ptr->srcPath));
-							_texture->Apply();
-							*value_ptr = _texture->getGuid();
+							const gns::assets::AssetInfo& info = gns::assets::AssetRegistry::Get(metadata_ptr->assetGuid);
+							gns::assets::AssetManager::LoadAsset(info);
+							gns::rendering::Texture* _texture = gns::Object::Get<gns::rendering::Texture>(metadata_ptr->assetGuid);
+
+							if (_texture->hdr)
+							{
+								*value_ptr = _texture->getGuid();
+								return;
+							}
+							LOG_WARNING("Assigned Texture is not an HDR map. Ignoring...");
 						}
 					}
 
@@ -318,9 +323,10 @@ void gns::editor::gui::InspectorWindow::DrawInspectedEntity()
 								AssetMetadata* metadata_ptr = assets::AssetImporter::GetMetadata(payload_string);
 								if (metadata_ptr->assetType == gns::assets::AssetType::Texture)
 								{
-									rendering::Texture* _texture = renderSystem->CreateTexture(PathManager::FromAssetsRelative(metadata_ptr->srcPath));
-									_texture->Apply();
-									currentSelectedEntityMaterial->textures[i] = _texture;
+									
+									const gns::assets::AssetInfo& info = gns::assets::AssetRegistry::Get(metadata_ptr->assetGuid);
+									gns::assets::AssetManager::LoadAsset(info);
+									currentSelectedEntityMaterial->textures[i] = Object::Get<rendering::Texture>(metadata_ptr->assetGuid);
 								}
 							}
 						}

@@ -1,5 +1,7 @@
 ﻿#include "gnspch.h"
 #include "AssetManager.h"
+
+#include "../Object/Object.h"
 gns::Event_T<gns::assets::AssetManager::AssetLoadedEvent> gns::assets::AssetManager::OnAssetLoadedEvent = {};
 gns::Event_T<gns::assets::AssetManager::AssetLoadFailedEvent> gns::assets::AssetManager::OnAssetLoadFailedEvent = {};
 std::queue<gns::assets::AssetManager::AssetLoadedEvent> gns::assets::AssetManager::AssetLoadedEventQueue = {};

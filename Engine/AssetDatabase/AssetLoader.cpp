@@ -69,6 +69,9 @@ void LoadTextures(gns::RenderSystem* renderSystem, gns::rendering::Material* mat
                 texture = renderSystem->GetDefaultNormalTexture();
             else
                 texture = renderSystem->GetDefaultColorTexture();
+        }else
+        {
+			texture->Apply();
         }
         material->textures[static_cast<uint32_t>(textureTypeMap[type])] = texture;
     }
@@ -256,6 +259,10 @@ bool AssetLoader::LoadSourceAsset()
 		}
 		break;
 	case AssetType::Texture:
+		{
+        gns::assets::TextureAssetDescription textureAsset = GetTextureAssetDescription(assetInfo.filePath);
+		LoadTextureSource(textureAsset);
+		}
 		break;
 	case AssetType::Sound:
 		break;
@@ -277,9 +284,11 @@ bool AssetLoader::LoadBakedAsset()
 
 bool AssetLoader::LoadMeshSource(MeshAssetDescription mesh_asset)
 {
+    /* 
     Entity entity = Entity::CreateEntity(assetInfo.name);
     entity::MeshComponent* mesh_cmp = &entity.AddComponet<entity::MeshComponent>();
     mesh_cmp->meshAsset = assetInfo.assetGuid;
+    */
 
     std::string assetDir = gns::fileUtils::GetContainingDirectory(mesh_asset.src_path);
     if (assetDir == "")
@@ -300,22 +309,29 @@ bool AssetLoader::LoadMeshSource(MeshAssetDescription mesh_asset)
     if (!scene->HasMeshes())
         return false;
 
-    std::vector<guid> loaded_MeshGuids = {};
-    loaded_MeshGuids.reserve(scene->mNumMeshes);
     std::vector<guid> loaded_materialGuids = {};
     loaded_materialGuids.reserve(scene->mNumMeshes);
     gns::RenderSystem* renderSystem = SystemsManager::GetSystem<gns::RenderSystem>();
 
+
     std::vector<rendering::Material*> materials = {};
-    if (scene->HasMaterials())
+    AssetManager::AssetLoadedEvent assetloaded = {};
+    assetloaded.assetName = assetInfo.name;
+    assetloaded.assetType = AssetType::Mesh;
+    assetloaded.loadedAsset = assetInfo.assetGuid;
+    assetloaded.primaryObjects.reserve(scene->mNumMeshes);
+    assetloaded.secondaryObjects.reserve(scene->mNumMeshes);
+    
+	if (scene->HasMaterials())
     {
         const std::string v_shader_path = R"(Shaders\colored_triangle_mesh.vert)";
         const std::string f_shader_path = R"(Shaders\tex_image.frag)";
-        rendering::Shader* shader = renderSystem->CreateShader("default_shader", v_shader_path, f_shader_path);
+        rendering::Shader* shader = renderSystem->CreateShader(
+            "default_shader", v_shader_path, f_shader_path);
 
         for (size_t m = 0; m < scene->mNumMaterials; m++)
         {
-            aiMaterial* mat = scene->mMaterials[m];
+        	aiMaterial* mat = scene->mMaterials[m];
 
             rendering::Material* material = renderSystem->CreateMaterial(shader, mat->GetName().C_Str());
             material->uniformData.metallic_roughness_AO = { 0,1,1,0 };
@@ -330,13 +346,12 @@ bool AssetLoader::LoadMeshSource(MeshAssetDescription mesh_asset)
         }
     }
 
+
     for (size_t m = 0; m < scene->mNumMeshes; m++)
     {
-        loaded_MeshGuids.push_back(mesh_asset.sub_meshes[m].mesh_guid);
-        gns::rendering::Mesh* newMesh = gns::Object::CreateWithGuid<gns::rendering::Mesh>(
-            mesh_asset.sub_meshes[m].mesh_guid, scene->mMeshes[m]->mName.C_Str());
-
         const aiMesh* mesh = scene->mMeshes[m];
+        gns::rendering::Mesh* newMesh = gns::Object::CreateWithGuid<gns::rendering::Mesh>(
+            mesh_asset.sub_meshes[m].mesh_guid, mesh->mName.C_Str());
 
         if (scene->HasMaterials())
             loaded_materialGuids.emplace_back(materials[mesh->mMaterialIndex]->getGuid());
@@ -367,12 +382,11 @@ bool AssetLoader::LoadMeshSource(MeshAssetDescription mesh_asset)
         }
         const uint32_t count = static_cast<uint32_t>(newMesh->indices.size());
         newMesh->bufferRange = { static_cast<uint32_t>(startindex), count };
-        std::vector<void*> data = { newMesh, materials[mesh->mMaterialIndex], mesh_cmp };
-        AssetManager::AssetLoadedEventQueue.emplace(
-            mesh_asset.sub_meshes[m].mesh_guid, AssetType::Mesh, assetInfo.name, data);
+        assetloaded.primaryObjects.push_back(mesh_asset.sub_meshes[m].mesh_guid);
+        assetloaded.secondaryObjects.push_back(materials[mesh->mMaterialIndex]->getGuid());
     }
+	AssetManager::AssetLoadedEventQueue.emplace(assetloaded);
     return true;
-    //onLoadSuccess_callback(loaded_MeshGuids, loaded_materialGuids);
 }
 
 void AssetLoader::LoadTextureSource(TextureAssetDescription texture_asset)
@@ -380,26 +394,26 @@ void AssetLoader::LoadTextureSource(TextureAssetDescription texture_asset)
     int32_t channels;
     int32_t chan = 4;
 
-    void* rawTextureData{nullptr};
+    void* rawTextureData{ nullptr };
     int32_t width;
     int32_t height;
     std::string absFilePath = PathHelper::FromAssetsRelative(texture_asset.src_path);
     std::string error_message = "";
     try
     {
-	    if (texture_asset.hdr)
-	    {
-	        LOG_INFO("Loading HDR image!" + texture_asset.assetHeader.assetName);
-	        rawTextureData = stbi_loadf(
-	            absFilePath.c_str(),&width,&height, &channels, chan);
-	    }
-		else
-	    {
-		    LOG_INFO("Loading SDR image!" + texture_asset.assetHeader.assetName);
-		    rawTextureData = stbi_load(
-	            absFilePath.c_str(),&width,&height,&channels, chan);
-	    }
-	    
+        if (texture_asset.hdr)
+        {
+            LOG_INFO("Loading HDR image!" + texture_asset.assetHeader.assetName);
+            rawTextureData = stbi_loadf(
+                absFilePath.c_str(), &width, &height, &channels, chan);
+        }
+        else
+        {
+            LOG_INFO("Loading SDR image!" + texture_asset.assetHeader.assetName);
+            rawTextureData = stbi_load(
+                absFilePath.c_str(), &width, &height, &channels, chan);
+        }
+
     }
     catch (const std::exception& ex)
     {
@@ -411,11 +425,17 @@ void AssetLoader::LoadTextureSource(TextureAssetDescription texture_asset)
         if (error_message == "")
             error_message = "Texture Load Failed";
         AssetManager::AssetLoadFailedEventQueue.emplace(assetInfo.assetGuid, assetInfo.name, error_message);
+        return;
     }
-    std::vector<uint32_t> dims = {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
-    std::vector<void*> textures = {rawTextureData, dims.data()};
-    AssetManager::AssetLoadedEventQueue.emplace(
-        texture_asset.assetHeader.assetGuid, AssetType::Texture, assetInfo.name,textures);
+
+    rendering::Texture* texture = Object::CreateWithGuid<rendering::Texture>(assetInfo.assetGuid, assetInfo.name);
+    texture->data = rawTextureData;
+    texture->width = width;
+    texture->height = height;
+    texture->hdr = texture_asset.hdr;
+    texture->mipLevels = 1;
+    texture->Apply();
+    AssetManager::AssetLoadedEventQueue.emplace(assetInfo.assetGuid, assetInfo.AssetType, assetInfo.name);
 }
 
 MeshAssetDescription AssetLoader::GetMeshAssetDescription(const std::string& assetFilePath)

@@ -506,6 +506,8 @@ void gns::rendering::Renderer::UploadMesh(Mesh* mesh, uint32_t startIndex, uint3
 		mesh->normals.clear();
 		mesh->colors.clear();
 		mesh->uvs.clear();
+        mesh->tangents.clear();
+        mesh->biTangents.clear();
 	}
 }
 

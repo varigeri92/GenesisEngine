@@ -46,6 +46,7 @@ void gns::rendering::Texture::Apply()
 	renderer->UpdateTextureDescriptorSet(this);
 	renderer->CreateSampler(this);
 	free(data);
+	data = nullptr;
 }
 
 void gns::rendering::Texture::Apply(void* _data)

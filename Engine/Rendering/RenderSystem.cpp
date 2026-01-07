@@ -173,31 +173,24 @@ void gns::RenderSystem::OnAssetLoaded(gns::assets::AssetManager::AssetLoadedEven
 	    break;
     case assets::AssetType::Mesh:
 	    {
-	        gns::rendering::Mesh* loadedMesh = static_cast<gns::rendering::Mesh*>(loadEvent.rawData[0]);
-	        gns::rendering::Material* loadedMaterial = static_cast<gns::rendering::Material*>(loadEvent.rawData[1]);
-	        entity::MeshComponent& mesh_component = *static_cast<gns::entity::MeshComponent*>(loadEvent.rawData[2]);
-	        loadedMesh->Apply();
-	        mesh_component.meshes.push_back(loadedMesh);
-	        mesh_component.materials.push_back(loadedMaterial);
+            Entity entity = Entity::CreateEntity(loadEvent.assetName);
+            entity::MeshComponent& mesh_component = entity.AddComponet<entity::MeshComponent>();
+            mesh_component.meshAsset = loadEvent.loadedAsset;
+            mesh_component.meshes.reserve(loadEvent.primaryObjects.size());
+            mesh_component.materials.reserve(loadEvent.primaryObjects.size());
+    		for (size_t i = 0; i < loadEvent.primaryObjects.size(); i++)
+	        {
+                rendering::Mesh* mesh = Object::Get<rendering::Mesh>(loadEvent.primaryObjects[i]);
+                UploadMesh(mesh);
+                rendering::Material* material = Object::Get<rendering::Material>(loadEvent.secondaryObjects[i]);
+				mesh_component.meshes.push_back(mesh);
+				mesh_component.materials.push_back(material);
+	        }
 	    }
 	    break;
     case assets::AssetType::Texture:
 		{
 	        LOG_INFO("LOAD TEXTURE SUCCESS");
-			/*
-	 
-    		uint32_t width = reinterpret_cast<uint32_t>(loadEvent.rawData[1]);
-            uint32_t height = reinterpret_cast<uint32_t>(loadEvent.rawData[1] + sizeof(uint32_t));
-
-    		LOG_INFO(std::to_string(width));
-            LOG_INFO(std::to_string(height));
-
-    		rendering::Texture* texture = Object::CreateWithGuid<rendering::Texture>(loadEvent.loadedAsset, loadEvent.assetName);
-            texture->hdr = false;
-            texture->width = width;
-            texture->height = height;
-    		texture->Apply(loadEvent.rawData[0]);
-			*/
 	    }
 	    break;
     case assets::AssetType::Sound:
@@ -213,7 +206,10 @@ void gns::RenderSystem::OnAssetLoaded(gns::assets::AssetManager::AssetLoadedEven
 
 void gns::RenderSystem::OnAssetLoadFailed(gns::assets::AssetManager::AssetLoadFailedEvent loadFailedEvent)
 {
-
+    LOG_ERROR("Asset Load FAILED:");
+    LOG_ERROR("GUID ->" + std::to_string(loadFailedEvent.assetGuid));
+    LOG_ERROR("NAME ->" + loadFailedEvent.assetName);
+    LOG_ERROR("MSG ->" + loadFailedEvent.message);
 }
 
 
@@ -245,29 +241,14 @@ void gns::RenderSystem::InitSystem()
 
     EventListener_T<gns::assets::AssetManager::AssetLoadedEvent> loadedEvent{
         [&](gns::assets::AssetManager::AssetLoadedEvent evt)
-    {
-        LOG_INFO("Asset Loaded:");
-        LOG_INFO("GUID ->" + std::to_string(evt.loadedAsset));
-        LOG_INFO("TYPE ->" + std::to_string(static_cast<uint32_t>(evt.assetType)));
-            if (evt.assetType == gns::assets::AssetType::Mesh)
-            {
-                gns::rendering::Mesh* loadedMesh = static_cast<gns::rendering::Mesh*>(evt.rawData[0]);
-                gns::rendering::Material* loadedMaterial = static_cast<gns::rendering::Material*>(evt.rawData[1]);
-                entity::MeshComponent& mesh_component = *static_cast<gns::entity::MeshComponent*>(evt.rawData[2]);
-                loadedMesh->Apply();
-                mesh_component.meshes.push_back(loadedMesh);
-                mesh_component.materials.push_back(loadedMaterial);
-            }
-
+	{
+        OnAssetLoaded(evt);
     } };
 
     EventListener_T<gns::assets::AssetManager::AssetLoadFailedEvent> loadFailedEvent{
         [&](gns::assets::AssetManager::AssetLoadFailedEvent evt)
     {
-        LOG_ERROR("Asset Load FAILED:");
-        LOG_ERROR("GUID ->" + std::to_string(evt.assetGuid));
-        LOG_ERROR("NAME ->" + evt.assetName);
-        LOG_ERROR("MSG ->" + evt.message);
+        OnAssetLoadFailed(evt);
     } };
 
     gns::assets::AssetManager::OnAssetLoadedEvent.AddListener(loadedEvent);
