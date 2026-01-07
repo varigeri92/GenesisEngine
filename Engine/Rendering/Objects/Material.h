@@ -43,6 +43,8 @@ namespace gns::rendering
 		VulkanBuffer buffer;
 		std::vector<Texture*> textures;
 
+		void Apply() override;
+
 		void SetFloat(const std::string& name, float value);
 		void SetInt(const std::string& name, uint32_t value);
 

@@ -16,6 +16,7 @@ namespace gns::rendering
 		Shader(const std::string& vertexShaderPath, const std::string& fragmentShaderPath, const std::string& name);
 		~Shader() = default;
 		void Dispose() override;
+		void Apply() override;
 	};
 
 	class ComputeShader : public Object
@@ -28,5 +29,12 @@ namespace gns::rendering
 		ComputeShader(const std::string& shaderPath, const std::string& name);
 		~ComputeShader() override;
 		void Dispose() override;
+
+		void Apply() override;
 	};
+
+	inline void ComputeShader::Apply()
+	{
+		LOG_INFO("apply ComputeShaderChanges");
+	}
 }

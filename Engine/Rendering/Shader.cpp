@@ -17,6 +17,11 @@ void gns::rendering::Shader::Dispose()
 	Object::Dispose();
 }
 
+void gns::rendering::Shader::Apply()
+{
+	LOG_INFO("Apply Shader Changes");
+}
+
 gns::rendering::ComputeShader::ComputeShader(const std::string& shaderPath, const std::string& name)
 	:Object(name), shaderPath(shaderPath)
 {}

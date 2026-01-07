@@ -55,8 +55,9 @@ std::unordered_map<size_t, std::function<void(const std::string& name, void* com
 						if (metadata_ptr->assetType == gns::assets::AssetType::Texture)
 						{
 							gns::RenderSystem* renderSystem = gns::SystemsManager::GetSystem<gns::RenderSystem>();
-							gns::rendering::Texture* texture = renderSystem->CreateTexture(PathManager::FromAssetsRelative(metadata_ptr->srcPath));
-							*value_ptr = texture->getGuid();
+							gns::rendering::Texture* _texture = renderSystem->CreateTexture(PathManager::FromAssetsRelative(metadata_ptr->srcPath));
+							_texture->Apply();
+							*value_ptr = _texture->getGuid();
 						}
 					}
 
@@ -317,8 +318,9 @@ void gns::editor::gui::InspectorWindow::DrawInspectedEntity()
 								AssetMetadata* metadata_ptr = assets::AssetImporter::GetMetadata(payload_string);
 								if (metadata_ptr->assetType == gns::assets::AssetType::Texture)
 								{
-									rendering::Texture* texture = renderSystem->CreateTexture(PathManager::FromAssetsRelative(metadata_ptr->srcPath));
-									currentSelectedEntityMaterial->textures[i] = texture;
+									rendering::Texture* _texture = renderSystem->CreateTexture(PathManager::FromAssetsRelative(metadata_ptr->srcPath));
+									_texture->Apply();
+									currentSelectedEntityMaterial->textures[i] = _texture;
 								}
 							}
 						}

@@ -193,6 +193,45 @@ const std::vector<guid> AssetLoader::LoadAsset()
     return {0};
 }
 
+bool AssetLoader::IsTextureHDR(const std::string& texture_path)
+{
+    if (stbi_is_hdr(texture_path.c_str()))
+    {
+        return true;
+    }
+    return false;
+}
+
+bool AssetLoader::ReadTextureData(const std::string& texture_path, uint32_t& width, uint32_t& height, int32_t& channels)
+{
+    bool hdr = IsTextureHDR(texture_path);
+    void* data;
+    int32_t chan = 4;
+
+    if (hdr)
+    {
+        data = stbi_loadf(
+            texture_path.c_str(),
+            reinterpret_cast<int32_t*>(&width),
+            reinterpret_cast<int32_t*>(&height), &channels, chan);
+    }else
+    {
+	    data = stbi_load(
+	        texture_path.c_str(),
+	        reinterpret_cast<int32_t*>(&width),
+	        reinterpret_cast<int32_t*>(&height),
+	        &channels, chan);
+    }
+    if (data == nullptr)
+    {
+		STBI_FREE(data);
+        LOG_INFO("Loading image Failed!"+ texture_path);
+        return false;
+    }
+    STBI_FREE(data);
+    return true;
+}
+
 bool AssetLoader::LoadSourceAsset()
 {
 	switch (assetInfo.AssetType)
@@ -210,10 +249,10 @@ bool AssetLoader::LoadSourceAsset()
 			catch (const std::exception& ex)
 			{
                 LOG_ERROR(ex.what());
-                AssetManager::AssetLoadFailedEventQueue.emplace_back(assetInfo.assetGuid, assetInfo.name, ex.what());
+                AssetManager::AssetLoadFailedEventQueue.emplace(assetInfo.assetGuid, assetInfo.name, ex.what());
                 return false;
 			}
-	        LoadMeshSource(meshAsset);
+	        return LoadMeshSource(meshAsset);
 		}
 		break;
 	case AssetType::Texture:
@@ -328,12 +367,55 @@ bool AssetLoader::LoadMeshSource(MeshAssetDescription mesh_asset)
         }
         const uint32_t count = static_cast<uint32_t>(newMesh->indices.size());
         newMesh->bufferRange = { static_cast<uint32_t>(startindex), count };
-        std::vector<void*> data = { newMesh, materials[mesh->mMaterialIndex] };
-        AssetManager::AssetLoadedEventQueue.emplace_back(
-            mesh_asset.sub_meshes[m].mesh_guid, AssetType::Mesh, data, mesh_cmp);
+        std::vector<void*> data = { newMesh, materials[mesh->mMaterialIndex], mesh_cmp };
+        AssetManager::AssetLoadedEventQueue.emplace(
+            mesh_asset.sub_meshes[m].mesh_guid, AssetType::Mesh, assetInfo.name, data);
     }
     return true;
     //onLoadSuccess_callback(loaded_MeshGuids, loaded_materialGuids);
+}
+
+void AssetLoader::LoadTextureSource(TextureAssetDescription texture_asset)
+{
+    int32_t channels;
+    int32_t chan = 4;
+
+    void* rawTextureData{nullptr};
+    int32_t width;
+    int32_t height;
+    std::string absFilePath = PathHelper::FromAssetsRelative(texture_asset.src_path);
+    std::string error_message = "";
+    try
+    {
+	    if (texture_asset.hdr)
+	    {
+	        LOG_INFO("Loading HDR image!" + texture_asset.assetHeader.assetName);
+	        rawTextureData = stbi_loadf(
+	            absFilePath.c_str(),&width,&height, &channels, chan);
+	    }
+		else
+	    {
+		    LOG_INFO("Loading SDR image!" + texture_asset.assetHeader.assetName);
+		    rawTextureData = stbi_load(
+	            absFilePath.c_str(),&width,&height,&channels, chan);
+	    }
+	    
+    }
+    catch (const std::exception& ex)
+    {
+        error_message = ex.what();
+    }
+
+    if (!rawTextureData)
+    {
+        if (error_message == "")
+            error_message = "Texture Load Failed";
+        AssetManager::AssetLoadFailedEventQueue.emplace(assetInfo.assetGuid, assetInfo.name, error_message);
+    }
+    std::vector<uint32_t> dims = {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
+    std::vector<void*> textures = {rawTextureData, dims.data()};
+    AssetManager::AssetLoadedEventQueue.emplace(
+        texture_asset.assetHeader.assetGuid, AssetType::Texture, assetInfo.name,textures);
 }
 
 MeshAssetDescription AssetLoader::GetMeshAssetDescription(const std::string& assetFilePath)
@@ -353,6 +435,24 @@ MeshAssetDescription AssetLoader::GetMeshAssetDescription(const std::string& ass
     {
         assetDescription.sub_meshes.emplace_back(subMesh["mesh_index"].as<uint32_t>(), subMesh["mesh_guid"].as<guid>());
     }
+
+    return assetDescription;
+}
+
+TextureAssetDescription AssetLoader::GetTextureAssetDescription(const std::string& assetFilePath)
+{
+    YAML::Node assetRootNode = YAML::LoadFile(assetFilePath);
+
+    AssetDescriptionHeader header = {
+        .assetGuid = assetRootNode["asset_guid"].as<gns::guid>(),
+        .assetName = assetRootNode["asset_name"].as<std::string>()
+    };
+    TextureAssetDescription assetDescription = {
+        .assetHeader = header,
+        .src_path = assetRootNode["file_path"].as<std::string>(),
+        .textureType = static_cast<TextureAssetType>(assetRootNode["texture_type"].as<uint32_t>()),
+        .hdr = assetRootNode["hdr"].as<bool>()
+    };
 
     return assetDescription;
 }

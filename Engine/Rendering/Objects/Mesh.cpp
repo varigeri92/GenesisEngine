@@ -5,9 +5,16 @@
 #include "../RenderSystem.h"
 #include "../../ECS/SystemsManager.h"
 
+
 gns::rendering::Mesh::Mesh(std::string name) : Object(name), keepCPU_Data(false),
-indices({}), positions({}), normals({}), uvs({}), colors({})
+                                               indices({}), positions({}), normals({}), uvs({}), colors({})
 {
+}
+
+void gns::rendering::Mesh::Apply()
+{
+	auto renderSystem = SystemsManager::GetSystem<RenderSystem>();
+	renderSystem->UploadMesh(this);
 }
 
 void gns::rendering::Mesh::DisposeInternal()

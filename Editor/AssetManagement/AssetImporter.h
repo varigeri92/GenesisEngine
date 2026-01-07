@@ -16,6 +16,12 @@ namespace gns::editor::assets
 		bool import_materials = true;
 	};
 
+	struct TextureImportOptions : public IAssetImportOptions
+	{
+		bool hdr = false;
+		gns::assets::TextureAssetType textureAssetType;
+	};
+
 	class AssetImporter
 	{
 	public:
@@ -31,5 +37,6 @@ namespace gns::editor::assets
 
 	private:
 		static bool ImportMesh(std::string file_path, MeshImportOptions options, guid guid);
+		static bool ImportTexture(const std::string& file_path, TextureImportOptions& out_options, guid guid);
 	};
 }

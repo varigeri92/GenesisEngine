@@ -25,17 +25,19 @@ namespace gns::rendering
 
 		~Texture() override;
 		void Dispose() override;
-		void CreateTexture(void* data, uint32_t width, uint32_t height, uint32_t mipLevels = 0, bool keepData = false);
+		void Apply() override;
+		void Apply(void* data);
 
-		void* data;
-		uint32_t width;
-		uint32_t height;
-		uint32_t mipLevels = 1;
-		TextureHandle handle;
-		bool hdr;
+		void* data {nullptr};
+		uint32_t width{1};
+		uint32_t height{1};
+		uint32_t mipLevels{ 1 };
+		TextureHandle handle{Handle::Invalid};
+		bool hdr{false};
 
 	private:
-		bool keepData;
+		bool keepData{false};
 		void DisposeInternal();
+		void CreateTexture(void* data, uint32_t width, uint32_t height, uint32_t mipLevels = 0, bool _keepData = false);
 	};
 }

@@ -6,7 +6,7 @@
 #include "../ECS/SystemBase.h"
 #include "Objects/Texture.h"
 #include "Vulkan/PipelineBuilder.h"
-
+#include "../AssetDatabase/AssetManager.h"
 class Screen;
 
 namespace gns
@@ -87,7 +87,9 @@ namespace gns
 		GNS_API ImTextureID GetImGuiTexture(TextureHandle handle);
 		GNS_API rendering::LightingSettings* GetLightningSettings();
 		rendering::Renderer* GetRenderer() const { return m_renderer; }
-		void DisposeShader(ShaderHandle handle);;
+		void DisposeShader(ShaderHandle handle);
+		void OnAssetLoaded(gns::assets::AssetManager::AssetLoadedEvent loadEvent);
+		void OnAssetLoadFailed(gns::assets::AssetManager::AssetLoadFailedEvent loadFailedEvent);
 		void InitSystem() override;
 		void UpdateSystem(const float deltaTime) override;
 		void FixedUpdate(const float fixedDeltaTime) override;

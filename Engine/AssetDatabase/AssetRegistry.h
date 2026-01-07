@@ -1,14 +1,15 @@
 ﻿#pragma once
+#include <glm/ext/scalar_uint_sized.hpp>
+
 #include "../Object/Guid.h"
 #include "../Utils/Logger.h"
 
 namespace gns::assets
 {
-	enum class AssetType
-	{
-		None, Mesh, Texture, Sound, Material, Shader, Compute
-	};
+	enum class AssetType{None, Mesh, Texture, Sound, Material, Shader, Compute };
 	enum class AssetKind { Invalid, Source, Baked };
+	enum class TextureAssetType { Texture2D, Array, CubeMap, Sprite };
+	
 	struct AssetInfo
 	{
 		AssetKind assetKind{ AssetKind::Invalid };
@@ -74,5 +75,16 @@ namespace gns::assets
 		AssetDescriptionHeader assetHeader;
 		std::string src_path;
 		std::vector<SubMesh> sub_meshes;
+	};
+
+	struct TextureAssetDescription
+	{
+		AssetDescriptionHeader assetHeader;
+		std::string src_path;
+		TextureAssetType textureType;
+		bool hdr;
+		uint32_t width;
+		uint32_t height;
+		uint32_t depth{1};
 	};
 }

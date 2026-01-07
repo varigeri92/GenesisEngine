@@ -11,3 +11,5 @@ void gns::rendering::Material::Dispose()
 	Object::Dispose();
 }
 
+void gns::rendering::Material::Apply() { LOG_INFO("apply material changes!"); }
+

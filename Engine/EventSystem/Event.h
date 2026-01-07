@@ -1,7 +1,7 @@
 #pragma once
+#include "API.h"
 #include <functional>
 #include <stack>
-
 #include "../Object/Guid.h"
 
 
@@ -20,7 +20,7 @@ namespace gns
 			m_eventFunc = func;
 			funcID = gns::Guid::GetNewGuid();
 		}
-		void Call(Args ... args) const
+		void Call(Args& ... args) const
 		{
 			m_eventFunc(args ...);
 		}
@@ -41,7 +41,7 @@ namespace gns
 	private:
 		std::vector<EventListener_T<Args ...>> m_listeners;
 	public:
-		void Dispatch(Args ... args)
+		void Dispatch(Args& ... args)
 		{
 			for (const auto & listener : m_listeners)
 			{

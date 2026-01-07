@@ -192,7 +192,7 @@ int main(int argc, char* argv[])
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::InspectorWindow>();
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::HierarchyView>();
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::SceneView>();
-		gns::GuiWindowDrawer::CreateGUIWindow<ShadowDebuggerWindow>();
+		//gns::GuiWindowDrawer::CreateGUIWindow<ShadowDebuggerWindow>();
 
 	});
 	engine.Run();

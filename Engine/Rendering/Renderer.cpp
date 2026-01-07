@@ -39,6 +39,16 @@ gns::rendering::Renderer::Renderer(Screen* screen) : m_screen(screen)
     globalUniform.exposure = 1.f;
     globalUniform.gamma = 1.f;
 
+
+    {
+        uint32_t white = glm::packUnorm4x8(glm::vec4(1, 1, 1, 1));
+        guid guid = hashString("white_hdr");
+        Texture* t = Object::CreateWithGuid<Texture>(guid, "white_hdr");
+        auto [handle, vkTexture] = m_device->CreateTexture(
+            reinterpret_cast<void*>(&white), { 1, 1, 1 }, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+        t->handle = handle;
+    }
+
 	//3 default textures, white, grey, black. 1 pixel each
     {
 	    uint32_t white = glm::packUnorm4x8(glm::vec4(1, 1, 1, 1));
@@ -48,6 +58,7 @@ gns::rendering::Renderer::Renderer(Screen* screen) : m_screen(screen)
 	        reinterpret_cast<void*>(&white), { 1, 1, 1 }, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
 	    t->handle = handle;
     }
+
     {
 	    uint32_t blue = glm::packUnorm4x8(glm::vec4(0.5, 0.5, 1, 1));
 	    guid guid = hashString("blue");
@@ -270,7 +281,7 @@ void gns::rendering::Renderer::BuildDrawData()
     {
         if (currenthandle == (uint32_t) - 1)
         {
-			TextureHandle handle = Object::Find<Texture>("black")->handle;
+			TextureHandle handle = Object::Find<Texture>("white")->handle;
             SetbgTexture(handle);
             currenthandle = handle.handle;
         }

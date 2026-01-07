@@ -1,10 +1,11 @@
 ﻿#pragma once
+#include <queue>
+
 #include "../EventSystem/Event.h"
 #include "AssetLoader.h"
 
 namespace gns::assets
 {
-	
 class AssetManager
 {
 public:
@@ -12,8 +13,8 @@ public:
 	{
 		gns::guid loadedAsset;
 		AssetType assetType;
+		std::string assetName;
 		std::vector<void*> rawData;
-		void* component_ptr;
 	};
 	struct AssetLoadFailedEvent
 	{
@@ -23,8 +24,9 @@ public:
 	};
 	GNS_API static gns::Event_T<AssetLoadedEvent> OnAssetLoadedEvent;
 	GNS_API static gns::Event_T<AssetLoadFailedEvent> OnAssetLoadFailedEvent;
-	GNS_API static std::vector<AssetLoadedEvent> AssetLoadedEventQueue;
-	GNS_API static std::vector<AssetLoadFailedEvent> AssetLoadFailedEventQueue;
+	GNS_API static std::queue<AssetLoadedEvent> AssetLoadedEventQueue;
+	GNS_API static std::queue<AssetLoadFailedEvent> AssetLoadFailedEventQueue;
 	GNS_API static void LoadAsset(AssetInfo info);
+
 };
 }

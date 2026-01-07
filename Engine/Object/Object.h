@@ -1,6 +1,6 @@
 #pragma once
+#include <queue>
 #include <unordered_map>
-
 #include "Guid.h"
 #include "../Utils/Logger.h"
 
@@ -10,7 +10,7 @@ namespace gns
 	{
 	public:
 		GNS_API static std::unordered_map<guid, Object*> m_objectMap;
-
+		static std::unordered_map<guid, Object*> m_intermediateObjectMap;
 		static void ReserveObjectMemory(const size_t reserve_size);
 
 		Object(std::string name);
@@ -20,6 +20,11 @@ namespace gns
 		std::string name;
 
 		inline guid getGuid() const { return m_guid; };
+
+		template<typename T, typename = std::enable_if<std::is_base_of<Object, T>::value>::type, typename... Args>
+		static T* CreateIntermediate(guid _guid, Args&& ... args);
+
+		static void FinalizeIntermediate(guid _guid);
 
 		template<typename T, typename = std::enable_if<std::is_base_of<Object, T>::value>::type, typename... Args>
 		static T* Create(Args&& ... args)
@@ -87,6 +92,7 @@ namespace gns
 		}
 
 		virtual void Dispose();
+		GNS_API virtual void Apply() = 0;
 	};
 }
 

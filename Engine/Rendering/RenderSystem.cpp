@@ -162,6 +162,61 @@ void gns::RenderSystem::DisposeShader(ShaderHandle handle)
     m_renderer->DisposeShader(handle);
 }
 
+void gns::RenderSystem::OnAssetLoaded(gns::assets::AssetManager::AssetLoadedEvent loadEvent)
+{
+    LOG_INFO("Asset Loaded:");
+    LOG_INFO("GUID ->" + std::to_string(loadEvent.loadedAsset));
+    LOG_INFO("TYPE ->" + std::to_string(static_cast<uint32_t>(loadEvent.assetType)));
+
+    switch (loadEvent.assetType) {
+    case assets::AssetType::None:
+	    break;
+    case assets::AssetType::Mesh:
+	    {
+	        gns::rendering::Mesh* loadedMesh = static_cast<gns::rendering::Mesh*>(loadEvent.rawData[0]);
+	        gns::rendering::Material* loadedMaterial = static_cast<gns::rendering::Material*>(loadEvent.rawData[1]);
+	        entity::MeshComponent& mesh_component = *static_cast<gns::entity::MeshComponent*>(loadEvent.rawData[2]);
+	        loadedMesh->Apply();
+	        mesh_component.meshes.push_back(loadedMesh);
+	        mesh_component.materials.push_back(loadedMaterial);
+	    }
+	    break;
+    case assets::AssetType::Texture:
+		{
+	        LOG_INFO("LOAD TEXTURE SUCCESS");
+			/*
+	 
+    		uint32_t width = reinterpret_cast<uint32_t>(loadEvent.rawData[1]);
+            uint32_t height = reinterpret_cast<uint32_t>(loadEvent.rawData[1] + sizeof(uint32_t));
+
+    		LOG_INFO(std::to_string(width));
+            LOG_INFO(std::to_string(height));
+
+    		rendering::Texture* texture = Object::CreateWithGuid<rendering::Texture>(loadEvent.loadedAsset, loadEvent.assetName);
+            texture->hdr = false;
+            texture->width = width;
+            texture->height = height;
+    		texture->Apply(loadEvent.rawData[0]);
+			*/
+	    }
+	    break;
+    case assets::AssetType::Sound:
+	    break;
+    case assets::AssetType::Material:
+	    break;
+    case assets::AssetType::Shader:
+	    break;
+    case assets::AssetType::Compute:
+	    break;
+    }
+}
+
+void gns::RenderSystem::OnAssetLoadFailed(gns::assets::AssetManager::AssetLoadFailedEvent loadFailedEvent)
+{
+
+}
+
+
 void gns::RenderSystem::InitSystem()
 {
     m_renderer = new gns::rendering::Renderer(m_renderScreen);
@@ -198,8 +253,8 @@ void gns::RenderSystem::InitSystem()
             {
                 gns::rendering::Mesh* loadedMesh = static_cast<gns::rendering::Mesh*>(evt.rawData[0]);
                 gns::rendering::Material* loadedMaterial = static_cast<gns::rendering::Material*>(evt.rawData[1]);
-                entity::MeshComponent& mesh_component = *static_cast<gns::entity::MeshComponent*>(evt.component_ptr);
-                UploadMesh(loadedMesh);
+                entity::MeshComponent& mesh_component = *static_cast<gns::entity::MeshComponent*>(evt.rawData[2]);
+                loadedMesh->Apply();
                 mesh_component.meshes.push_back(loadedMesh);
                 mesh_component.materials.push_back(loadedMaterial);
             }

@@ -113,6 +113,11 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
         import_result = ImportMesh(relative_path, {}, guid);
 	    break;
     case gns::assets::AssetType::Texture:
+	    {
+	        TextureImportOptions texture_import_options = {};
+	        texture_import_options.textureAssetType = gns::assets::TextureAssetType::Texture2D;
+	        import_result = ImportTexture(relative_path, texture_import_options, guid);
+	    }
 	    break;
     case gns::assets::AssetType::Sound:
 	    break;
@@ -292,17 +297,64 @@ bool gns::editor::assets::AssetImporter::ImportMesh(std::string file_path, MeshI
 	    out << YAML::EndSeq << YAML::EndMap;
 
 
-	    std::string DatabaseFilePath = PathManager::FromAssetsRelative(file_path + ".gnsMesh");
 	    {
-	        std::ofstream outfile(DatabaseFilePath);
+			std::string gnsMeshFilePath = PathManager::FromAssetsRelative(file_path + ".gnsMesh");
+	        std::ofstream outfile(gnsMeshFilePath);
 	        outfile << out.c_str() << std::endl;
 	        outfile.close();
 	    }
     }
     catch (const std::exception& e)
     {
-        LOG_ERROR("Failed to inport Mesh '{}': {}", path, e.what());
+        LOG_ERROR("Failed to import Mesh: " + static_cast<std::string>(e.what()));
         return false;
     }
     
+}
+
+bool gns::editor::assets::AssetImporter::ImportTexture(const std::string& file_path, TextureImportOptions& out_options, guid guid)
+{
+
+    std::string aPath = PathManager::FromAssetsRelative(file_path);
+    if (!gns::fileUtils::FileExists(aPath))
+        return false;
+    int32_t channels;
+    uint32_t width;
+    uint32_t height;
+    uint32_t depth = 1;
+    bool hdr = gns::assets::AssetLoader::IsTextureHDR(aPath);
+
+	if (!gns::assets::AssetLoader::ReadTextureData(aPath, width, height, channels))
+        return false;
+
+    //Create gnsTexture
+    std::string assetname = fileUtils::GetFileNameFromPath(file_path);
+    gns::assets::TextureAssetDescription textureAsset = {
+	    {guid, assetname}, 
+    	file_path, 
+    	out_options.textureAssetType,
+        hdr,
+        width,
+        height,
+        depth
+    };
+    YAML::Emitter out;
+    out << YAML::BeginMap;
+    out << "asset_guid" << guid;
+    out << "asset_name" << assetname;
+    out << "file_path" << file_path;
+    out << "texture_type" << static_cast<uint32_t>(out_options.textureAssetType);
+    out << "width" << width;
+    out << "height" << height;
+    out << "depth" << depth;
+    out <<  YAML::EndMap;
+
+
+    {
+        std::string gnsAssetFilePath = PathManager::FromAssetsRelative(file_path + ".gnsTex");
+        std::ofstream outfile(gnsAssetFilePath);
+        outfile << out.c_str() << "\n";
+        outfile.close();
+    }
+
 }

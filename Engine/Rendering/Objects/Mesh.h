@@ -28,7 +28,7 @@ namespace gns::rendering
 		IndexBufferRange bufferRange{ 0,0 };
 		MeshHandle handle;
 
-
+		void Apply() override;
 	protected:
 		//Use Object::Create<Mesh>(name) instead!
 		Mesh(std::string name);

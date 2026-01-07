@@ -11,12 +11,10 @@ gns::rendering::Texture::Texture(const std::string& name, const std::string& pat
 	: Object(name)
 {
 	assets::LoadTexture(path, *this, &hdr);
-	CreateTexture(data, width, height, mipLevels, false);
-	free(data);
 }
 
 gns::rendering::Texture::Texture(const std::string& name)
-	: Object(name), data(nullptr), width(1), height(1), keepData(false)
+	: Object(name)
 {}
 
 gns::rendering::Texture::~Texture()
@@ -31,8 +29,14 @@ void gns::rendering::Texture::Dispose()
 	Object::Dispose();
 }
 
-void gns::rendering::Texture::CreateTexture(void* data, uint32_t width, uint32_t height, uint32_t mipLevels, bool keepData)
+void gns::rendering::Texture::Apply()
 {
+	if (!data)
+	{
+		LOG_ERROR("Cannot apply Texture because no data was set!");
+		LOG_VERBOSE("Call 'Texture::Apply(void* data);' to set the Raw texture data instead of 'Texture::Apply();'");
+		return;
+	}
 	auto* renderer = SystemsManager::GetSystem<RenderSystem>()->GetRenderer();
 	VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
 	if (hdr)
@@ -41,6 +45,13 @@ void gns::rendering::Texture::CreateTexture(void* data, uint32_t width, uint32_t
 	renderer->CreateTextureDescriptorSet(this);
 	renderer->UpdateTextureDescriptorSet(this);
 	renderer->CreateSampler(this);
+	free(data);
+}
+
+void gns::rendering::Texture::Apply(void* _data)
+{
+	data = _data;
+	Apply();
 }
 
 void gns::rendering::Texture::DisposeInternal()

@@ -39,15 +39,18 @@ namespace gns
 		REGISTER_COMPONENT(rendering::SkyComponent);
 
 		serialization::SceneSerializer::RegisterTable();
-		defaultScreen = new Screen{1920, 1080, 1.f, ((float)1920/(float)1080), false, true};
+		constexpr uint32_t SCREEN_WIDTH = 1920;
+		constexpr uint32_t SCREEN_HEIGHT = 1080;
+		constexpr float SCREEN_ASPECT = static_cast<float>(SCREEN_WIDTH)/static_cast<float>(SCREEN_HEIGHT);
+		defaultScreen = new Screen{SCREEN_WIDTH, SCREEN_HEIGHT, 1.f, (SCREEN_ASPECT), false, true};
+		
 		m_mainWindow = SystemsManager::RegisterSystem<WindowSystem>(tittle, defaultScreen);
 		SystemsManager::RegisterSystem<TransformSystem>();
 	}
 
 	void Engine::OnEngineStart(const std::function<void()>& callback)
 	{
-		auto* renderSystem = SystemsManager::RegisterSystem<RenderSystem>(defaultScreen);
-
+		SystemsManager::RegisterSystem<RenderSystem>(defaultScreen);
 		scene::SceneManager::CreateScene("Default Scene");
 		callback();
 	}
