@@ -17,6 +17,16 @@ public:
 		std::string assetName;
 		std::vector<gns::guid> primaryObjects {};
 		std::vector<gns::guid> secondaryObjects {};
+		GnsHandle* filed_ptr {nullptr};
+	};
+
+	struct AssetLoadedWithFieldReferenceEvent
+	{
+		gns::guid loadedAsset;
+		AssetType assetType;
+		std::string assetName;
+		std::vector<gns::guid> primaryObjects{};
+		std::vector<gns::guid> secondaryObjects{};
 	};
 
 	struct AssetLoadFailedEvent
@@ -31,6 +41,7 @@ public:
 	GNS_API static std::queue<AssetLoadedEvent> AssetLoadedEventQueue;
 	GNS_API static std::queue<AssetLoadFailedEvent> AssetLoadFailedEventQueue;
 	GNS_API static void LoadAsset(AssetInfo info);
+	GNS_API static void LoadAsset(AssetInfo info, GnsHandle* field_ptr);
 
 };
 }

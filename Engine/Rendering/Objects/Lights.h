@@ -54,11 +54,12 @@ namespace gns::rendering
 
 	struct SkyComponent : public ISerializeableComponent
 	{
-		guid hdr { 0 };
+
+		GnsHandle hdr_texture{ 0, assets::AssetType::Texture };
 		void RegisterFields(ComponentMeta& componentMetaData)
 		{
 			SET_CMP_NAME(SkyComponent);
-			REGISTER_FIELD(guid, hdr);
+			REGISTER_FIELD(GnsHandle, hdr_texture);
 		}
 	};
 }

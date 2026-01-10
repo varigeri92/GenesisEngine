@@ -1,9 +1,7 @@
 ﻿#pragma once
-
-namespace gns::gui
-{
-	class GuiWindow;
-}
+#include <algorithm>
+#include <string_view>
+#include "../GUI/GuiWindow.h"
 
 namespace gns
 {
@@ -21,6 +19,17 @@ namespace gns
 			static_cast<gui::GuiWindow*>(newWindow)->InitWindow();
 			GuiWindows.push_back(newWindow);
 			return newWindow;
+		}
+
+		static gui::GuiWindow* GetWindow(std::string_view name)
+		{
+			auto it = std::find_if(GuiWindows.begin(), GuiWindows.end(),
+				[&](const gns::gui::GuiWindow* w)
+				{
+					return w && w->m_title == name; // adjust accessor
+				});
+
+			return (it != GuiWindows.end()) ? *it : nullptr;
 		}
 	};
 }

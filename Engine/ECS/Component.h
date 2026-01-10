@@ -7,6 +7,7 @@
 #include "../Object/Guid.h"
 #include "../Object/Object.h"
 #include "../Rendering/Objects/Material.h"
+#include "../Rendering/Objects/Mesh.h"
 
 namespace gns::rendering
 {
@@ -107,17 +108,28 @@ namespace gns::entity
 
 	struct MeshComponent : public ISerializeableComponent
 	{
+		/* 
 		guid meshAsset;
 		guid material_ref;
+		*/
+		
+		GnsHandle meshAssetHandle{ 0, assets::AssetType::Mesh };
+		GnsHandle materialAssetHandle{ 0, assets::AssetType::Material };
+		
 
 		std::vector<rendering::Material*> materials;
 		std::vector<rendering::Mesh*> meshes;
 
 		MeshComponent() = default;
-		MeshComponent(guid mesh_ref, guid material_ref) : meshAsset(mesh_ref), material_ref(material_ref) {};
-		MeshComponent(guid mesh_ref) : meshAsset(mesh_ref)
+		MeshComponent(guid mesh_ref, guid material_ref) : 
+			meshAssetHandle(mesh_ref, assets::AssetType::Mesh), 
+			materialAssetHandle(material_ref, assets::AssetType::Material) {};
+		MeshComponent(guid mesh_ref) : meshAssetHandle(mesh_ref, assets::AssetType::Mesh)
 		{
-			material_ref = Object::Find<gns::rendering::Material>("default_material")->getGuid();
+			materialAssetHandle.AssignObject(
+				Object::Find<gns::rendering::Material>("default_material")->getGuid(), 
+				assets::AssetType::Material
+			);
 		};
 		MeshComponent(const MeshComponent& other) = delete;
 		MeshComponent(MeshComponent&& other) = delete;
@@ -129,7 +141,7 @@ namespace gns::entity
 		{
 			SET_CMP_NAME(MeshComponent);
 
-			REGISTER_FIELD(guid, meshAsset);
+			REGISTER_FIELD(GnsHandle, meshAssetHandle);
 		};
 	};
 

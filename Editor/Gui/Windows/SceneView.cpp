@@ -23,7 +23,7 @@ void gns::editor::gui::SceneView::CreateMesh(AssetMetadata* metaData)
 	const gns::assets::MeshAssetDescription meshAsset = assets::AssetImporter::GetMeshAsset(*metaData);
 	Entity entity = Entity::CreateEntity(metaData->assetName);
 	entity::MeshComponent& mesh_cmp = entity.AddComponet<entity::MeshComponent>();
-	mesh_cmp.meshAsset = metaData->assetGuid;
+	mesh_cmp.meshAssetHandle.AssignObject(metaData->assetGuid, metaData->assetType);
 	gns::assets::LoadMeshAsset(meshAsset,
 	[&](const std::vector<guid>& loadedMeshes, const std::vector<guid>& loadedMaterials)
 	{
@@ -103,11 +103,8 @@ void gns::editor::gui::SceneView::OnWindowDraw()
 				AssetMetadata* metadata_ptr = assets::AssetImporter::GetMetadata(payload_string);
 				if (metadata_ptr->assetType == gns::assets::AssetType::Mesh)
 				{
-					{
-						const gns::assets::AssetInfo& info = gns::assets::AssetRegistry::Get(metadata_ptr->assetGuid);
-						gns::assets::AssetManager::LoadAsset(info);
-					}
-					//CreateMesh(metadata_ptr);
+					const gns::assets::AssetInfo& info = gns::assets::AssetRegistry::Get(metadata_ptr->assetGuid);
+					gns::assets::AssetManager::LoadAsset(info);
 				}
 			}
 			//...

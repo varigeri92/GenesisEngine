@@ -195,8 +195,6 @@ void gns::serialization::SceneSerializer::RegisterTable()
 		{
 			gns::Entity entity = { entity_handle };
 			auto& component = entity.AddComponet<gns::entity::MeshComponent>();
-			component.meshAsset = 0;
-			component.material_ref = 0;
 			return static_cast<void*>(&component);
 		});
 	YamlComponentSerializationEntry::RegisterSerializableComponent<gns::rendering::LightComponent>(
@@ -363,7 +361,7 @@ void SceneSerializer::ProcessSceneReferences(gns::scene::Scene* scene)
 		gns::entity::MeshComponent* meshComp;
 		if(entity.TryGetComponent<gns::entity::MeshComponent>(meshComp))
 		{
-			assets::AssetInfo assetInfo = assets::AssetRegistry::Get(meshComp->meshAsset);
+			assets::AssetInfo assetInfo = assets::AssetRegistry::Get(meshComp->meshAssetHandle.GetGuid());
 			gns::assets::MeshAssetDescription meshAsset = GetMeshAsset(assetInfo.filePath);
 			assets::LoadMeshAsset(meshAsset, 
 				[&](const std::vector<guid>& loadedMeshes, const std::vector<guid>& loadedMaterials)

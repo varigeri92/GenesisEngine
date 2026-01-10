@@ -25,23 +25,26 @@ static ImGuiTableFlags table_flags = ImGuiTableFlags_SizingStretchProp | ImGuiTa
 
 std::unordered_map<size_t, std::function<void(const std::string& name, void* componentData, size_t offset)>> FieldDrawTable
 {
-	{typeid(std::string).hash_code(),[](const std::string& name, void* componentData, size_t offset)
+	{typeid(std::string).hash_code(),
+		[](const std::string& name, void* componentData, size_t offset)
 		{
 			ImGui::Text(reinterpret_cast<std::string*>(static_cast<char*>(componentData) + offset)->c_str());
 		}
 	},
-	{typeid(glm::vec3).hash_code(),[](const std::string& name, void* componentData, size_t offset)
+	{typeid(glm::vec3).hash_code(),
+		[](const std::string& name, void* componentData, size_t offset)
 		{
 			ImGui::DragFloat3(("##" + name).c_str(),
 			reinterpret_cast<float*>(static_cast<char*>(componentData) + offset), 0.1f);
 		}
 	},
-	{typeid(gns::guid).hash_code(),[](const std::string& name, void* componentData, size_t offset)
+	{typeid(gns::guid).hash_code(),
+		[](const std::string& name, void* componentData, size_t offset)
 		{
 			size_t* value_ptr = reinterpret_cast<size_t*>(static_cast<char*>(componentData) + offset);
 
 			ImGui::Button( std::to_string(*value_ptr).c_str(),
-				{ ImGui::GetContentRegionAvail().x, 0 });
+			              { ImGui::GetContentRegionAvail().x, 0 });
 			if (ImGui::BeginDragDropTarget())
 			{
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GNS_ASSET"))
@@ -55,14 +58,6 @@ std::unordered_map<size_t, std::function<void(const std::string& name, void* com
 						{
 							const gns::assets::AssetInfo& info = gns::assets::AssetRegistry::Get(metadata_ptr->assetGuid);
 							gns::assets::AssetManager::LoadAsset(info);
-							gns::rendering::Texture* _texture = gns::Object::Get<gns::rendering::Texture>(metadata_ptr->assetGuid);
-
-							if (_texture->hdr)
-							{
-								*value_ptr = _texture->getGuid();
-								return;
-							}
-							LOG_WARNING("Assigned Texture is not an HDR map. Ignoring...");
 						}
 					}
 
@@ -72,25 +67,69 @@ std::unordered_map<size_t, std::function<void(const std::string& name, void* com
 
 		}
 	},
-	{typeid(bool).hash_code(),[](const std::string& name, void* componentData, size_t offset)
+	{typeid(gns::GnsHandle).hash_code(),
+		[](const std::string& name, void* componentData, size_t offset)
+		{
+			std::string label = "NULL";
+			gns::GnsHandle* handle_ptr = reinterpret_cast<gns::GnsHandle*>(static_cast<char*>(componentData) + offset);
+			if (!handle_ptr->IsNull())
+			{
+				gns::Object* refered_object = gns::Object::GetObj(handle_ptr->GetGuid());
+				if (refered_object)
+					label = refered_object->name;
+				else
+					label = gns::assets::AssetRegistry::Get(handle_ptr->GetGuid()).name;
+			}
+
+			ImGui::Button(label.c_str(), { ImGui::GetContentRegionAvail().x, 0 });
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GNS_ASSET"))
+				{
+					const std::string& payload_string = *static_cast<std::string*>(payload->Data);
+					LOG_INFO(payload_string);
+					if (gns::editor::assets::AssetImporter::ImportAsset(payload_string, false))
+					{
+						gns::AssetMetadata* metadata_ptr = gns::editor::assets::AssetImporter::GetMetadata(payload_string);
+						if (metadata_ptr->assetType == handle_ptr->GetType())
+						{
+							const gns::assets::AssetInfo& info = gns::assets::AssetRegistry::Get(metadata_ptr->assetGuid);
+							gns::assets::AssetManager::LoadAsset(info, handle_ptr);
+						}
+						else
+						{
+							LOG_WARNING("Asset type mismatch!");
+						}
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
+
+		}
+	},
+	{typeid(bool).hash_code(),
+		[](const std::string& name, void* componentData, size_t offset)
 		{
 			ImGui::Checkbox(("##" + name).c_str(),
 			reinterpret_cast<bool*>(static_cast<char*>(componentData) + offset));
 		}
 	},
-	{typeid(float).hash_code(),[](const std::string& name, void* componentData, size_t offset)
+	{typeid(float).hash_code(),
+		[](const std::string& name, void* componentData, size_t offset)
 		{
 			ImGui::DragFloat(("##" + name).c_str(),
 			reinterpret_cast<float*>(static_cast<char*>(componentData) + offset), 0.1f);
 		}
 	},
-	{typeid(gns::color4).hash_code(),[](const std::string& name, void* componentData, size_t offset)
+	{typeid(gns::color4).hash_code(),
+		[](const std::string& name, void* componentData, size_t offset)
 		{
 			ImGui::ColorEdit4(("##" + name).c_str(),
 			reinterpret_cast<float*>(static_cast<char*>(componentData) + offset));
 		}
 	},
-	{typeid(gns::color3).hash_code(),[](const std::string& name, void* componentData, size_t offset)
+	{typeid(gns::color3).hash_code(),
+		[](const std::string& name, void* componentData, size_t offset)
 		{
 			ImGui::ColorEdit3(("##" + name).c_str(),
 			reinterpret_cast<float*>(static_cast<char*>(componentData) + offset));
@@ -356,18 +395,6 @@ void gns::editor::gui::InspectorWindow::DrawInspectedEntity()
 	}
 }
 
-struct meshImportSettings
-{
-	bool isStatic = true;
-	bool importMaterials = true;
-
-	bool importSkeleton = true;
-	bool importTextures = true;
-
-	bool generatePrefab = true;
-};
-meshImportSettings meshImportSettings;
-
 void gns::editor::gui::InspectorWindow::DrawInspectedAsset()
 {
 	constexpr float third_ratio = 0.33333333f;
@@ -393,37 +420,6 @@ void gns::editor::gui::InspectorWindow::DrawInspectedAsset()
 		ImGui::Text(assetMetadata->srcPath.c_str());
 		ImGui::Text(std::to_string(static_cast<int>(assetMetadata->assetType)).c_str());
 		ImGui::Separator();
-		if (ImGui::BeginTable("ImportSettings Table", 2, table_flags))
-		{
-			ImGui::TableSetupColumn("##", ImGuiTableColumnFlags_WidthFixed, label_width);
-			ImGui::TableSetupColumn("##", ImGuiTableColumnFlags_WidthFixed, available_Width - label_width);
-
-			if(assetMetadata->assetType == gns::assets::AssetType::Mesh)
-			{
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Is Static:");
-				ImGui::TableNextColumn();
-				ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-				ImGui::Checkbox("##isStatic", &meshImportSettings.isStatic);
-
-
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Import Materials:");
-				ImGui::TableNextColumn();
-				ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-				ImGui::Checkbox("##Import Materials", &meshImportSettings.importMaterials);
-
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Import Textures:");
-				ImGui::TableNextColumn();
-				ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-				ImGui::Checkbox("##ImportTextures", &meshImportSettings.importTextures);
-			}
-			ImGui::EndTable();
-		}
 	}
 	if(is_imported)
 	{

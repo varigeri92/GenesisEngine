@@ -1,16 +1,37 @@
 ﻿#pragma once
+#include <unordered_map>
+
 #include "GenesisGui.h"
 
 class AssetImporterWindow : public gns::gui::GuiWindow
 {
+public:
+	struct MeshImportSettings
+	{
+		bool isStatic = true;
+		bool importMaterials = true;
+		bool importSkeleton = true;
+		bool importTextures = true;
+		bool generatePrefab = true;
+	};
+
+
 protected:
+	MeshImportSettings* meshImportSettings;
+	std::string m_filePath;
+	gns::assets::AssetType m_assetType {gns::assets::AssetType::Mesh};
 	void OnWindowOpen() override;
 	void OnWindowClosed() override;
 	void OnWindowDraw() override;
 
+	void DrawMeshOptions(MeshImportSettings& importSettings, float label_width, float available_Width);
+
+	void DrawCheckBox(bool* value, const std::string label);
+
 public:
 	~AssetImporterWindow() override;
 
+	void OpenMeshImporterWindow(const std::string& path, gns::assets::AssetType type, MeshImportSettings& importSettings);
 protected:
 	void InitWindow() override;
 	bool OnWindowBegin() override;

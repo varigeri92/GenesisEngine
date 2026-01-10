@@ -11,6 +11,8 @@
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
 
+#include "../../Engine/Rendering/GuiWindowDrawer.h"
+#include "../Gui/Windows/AssetImporterWindow.h"
 #include "yaml-cpp/yaml.h"
 
 namespace gns::assets
@@ -67,103 +69,18 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
         else
             return true;
     }
-
     gns::assets::AssetType assetType = assets::AssetImporter::GetAssetType(fileUtils::GetFileExtension(relative_path));
-
-    bool import_result = false;
-    
-	switch (assetType) {
-    case gns::assets::AssetType::None:
-	    break;
-    case gns::assets::AssetType::Mesh:
-        import_result = ImportMesh(relative_path, {}, guid);
-	    break;
-    case gns::assets::AssetType::Texture:
-	    {
-	        TextureImportOptions texture_import_options = {};
-	        texture_import_options.textureAssetType = gns::assets::TextureAssetType::Texture2D;
-	        import_result = ImportTexture(relative_path, texture_import_options, guid);
-	    }
-	    break;
-    case gns::assets::AssetType::Sound:
-	    break;
-    case gns::assets::AssetType::Material:
-	    break;
-    case gns::assets::AssetType::Shader:
-	    break;
-    case gns::assets::AssetType::Compute:
-	    break;
-    default: ;
-    }
-
-    if(import_result)
-    {
-	    std::string Extension = "";
-
-	    switch (assetType) {
-	    case gns::assets::AssetType::None:
-		    break;
-	    case gns::assets::AssetType::Mesh:
-	        Extension = ".gnsMesh";
-		    break;
-	    case gns::assets::AssetType::Texture:
-            Extension = ".gnsTex";
-	    	break;
-	    case gns::assets::AssetType::Sound:
-		    break;
-	    case gns::assets::AssetType::Material:
-		    break;
-	    case gns::assets::AssetType::Shader:
-		    break;
-	    case gns::assets::AssetType::Compute:
-		    break;
-	    }
-
-        AssetLibrary::assetDatabase[guid] = {
-		    .assetGuid = guid,
-		    .assetName = fileUtils::GetFileNameFromPath(relative_path),
-		    .srcPath = relative_path + Extension,
-		    .assetType = assetType
-        };
+    AssetImporterWindow* importer_window = reinterpret_cast<AssetImporterWindow*>(gns::GuiWindowDrawer::GetWindow("Import Asset"));
 	
+	if (importer_window)
+	{
+		AssetImporterWindow::MeshImportSettings settings = 
+			{true, true, false, true, false};
+        importer_window->OpenMeshImporterWindow(filePath, assetType, settings);
+	}
 
 
-	    YAML::Emitter meta_yaml;
-	    meta_yaml << YAML::BeginMap
-	        << "asset_guid" << AssetLibrary::assetDatabase[guid].assetGuid
-	        << "asset_name" << AssetLibrary::assetDatabase[guid].assetName
-	        << "src_path" << AssetLibrary::assetDatabase[guid].srcPath
-	        << "asset_type" << static_cast<uint32_t>(AssetLibrary::assetDatabase[guid].assetType) << YAML::EndMap;
-	    std::string meta_filePath = relative_path + ".meta";
-	    
-	    {
-		    std::ofstream outfile(PathManager::FromAssetsRelative(meta_filePath));
-		    outfile << meta_yaml.c_str() << std::endl;
-		    outfile.close();
-	    }
-
-	    YAML::Emitter database_yaml;
-	    database_yaml << YAML::BeginMap
-	        << "guid" << guid
-	        << "meta_path" << meta_filePath
-		<< YAML::EndMap;
-
-	    std::string DatabaseFilePath = PathManager::FromDatabaseRelative("." + std::to_string(guid));
-	    {
-		    std::ofstream outfile(DatabaseFilePath);
-		    outfile << database_yaml.c_str() << std::endl;
-		    outfile.close();
-	    }
-
-        gns::assets::AssetRegistry::Add(guid, {
-            gns::assets::AssetKind::Source, AssetLibrary::assetDatabase[guid].assetType, guid,  AssetLibrary::assetDatabase[guid].assetName,
-            PathManager::AssetsPath + relative_path + Extension,
-            0,0
-            });
-
-    }
-
-	return import_result;
+    return ImportAssetInternal(assetType, relative_path, guid);
 }
 
 bool gns::editor::assets::AssetImporter::IsImported(const std::string& filePath)
@@ -189,10 +106,6 @@ bool gns::editor::assets::AssetImporter::IsMeta(const std::string& filePath)
     return false;
 }
 
-void gns::editor::assets::AssetImporter::OpenImportWindow(gns::assets::AssetType type)
-{
-
-}
 
 gns::AssetMetadata* gns::editor::assets::AssetImporter::GetMetadata(const std::string& assetPath)
 {
@@ -320,7 +233,7 @@ bool gns::editor::assets::AssetImporter::ImportMesh(std::string file_path, MeshI
     
 }
 
-bool gns::editor::assets::AssetImporter::ImportTexture(const std::string& file_path, TextureImportOptions& out_options, guid guid)
+bool gns::editor::assets::AssetImporter::ImportTexture(const std::string& file_path, TextureImportOptions& out_options, const guid guid)
 {
 
     std::string aPath = PathManager::FromAssetsRelative(file_path);
@@ -366,4 +279,103 @@ bool gns::editor::assets::AssetImporter::ImportTexture(const std::string& file_p
         outfile.close();
     }
 
+}
+
+bool gns::editor::assets::AssetImporter::ImportAssetInternal(
+    const  gns::assets::AssetType assetType, const std::string& relative_path, const  gns::guid guid)
+{
+    bool import_result = false;
+
+    switch (assetType) {
+    case gns::assets::AssetType::None:
+        break;
+    case gns::assets::AssetType::Mesh:
+        import_result = ImportMesh(relative_path, {}, guid);
+        break;
+    case gns::assets::AssetType::Texture:
+    {
+        TextureImportOptions texture_import_options = {};
+        texture_import_options.textureAssetType = gns::assets::TextureAssetType::Texture2D;
+        import_result = ImportTexture(relative_path, texture_import_options, guid);
+    }
+    break;
+    case gns::assets::AssetType::Sound:
+        break;
+    case gns::assets::AssetType::Material:
+        break;
+    case gns::assets::AssetType::Shader:
+        break;
+    case gns::assets::AssetType::Compute:
+        break;
+    default:;
+    }
+
+    if (import_result)
+    {
+        std::string Extension = "";
+
+        switch (assetType) {
+        case gns::assets::AssetType::None:
+            break;
+        case gns::assets::AssetType::Mesh:
+            Extension = ".gnsMesh";
+            break;
+        case gns::assets::AssetType::Texture:
+            Extension = ".gnsTex";
+            break;
+        case gns::assets::AssetType::Sound:
+            break;
+        case gns::assets::AssetType::Material:
+            break;
+        case gns::assets::AssetType::Shader:
+            break;
+        case gns::assets::AssetType::Compute:
+            break;
+        }
+
+        AssetLibrary::assetDatabase[guid] = {
+            .assetGuid = guid,
+            .assetName = fileUtils::GetFileNameFromPath(relative_path),
+            .srcPath = relative_path + Extension,
+            .assetType = assetType
+        };
+
+
+
+        YAML::Emitter meta_yaml;
+        meta_yaml << YAML::BeginMap
+            << "asset_guid" << AssetLibrary::assetDatabase[guid].assetGuid
+            << "asset_name" << AssetLibrary::assetDatabase[guid].assetName
+            << "src_path" << AssetLibrary::assetDatabase[guid].srcPath
+            << "asset_type" << static_cast<uint32_t>(AssetLibrary::assetDatabase[guid].assetType) << YAML::EndMap;
+        std::string meta_filePath = relative_path + ".meta";
+
+        {
+            std::ofstream outfile(PathManager::FromAssetsRelative(meta_filePath));
+            outfile << meta_yaml.c_str() << std::endl;
+            outfile.close();
+        }
+
+        YAML::Emitter database_yaml;
+        database_yaml << YAML::BeginMap
+            << "guid" << guid
+            << "meta_path" << meta_filePath
+            << YAML::EndMap;
+
+        std::string DatabaseFilePath = PathManager::FromDatabaseRelative("." + std::to_string(guid));
+        {
+            std::ofstream outfile(DatabaseFilePath);
+            outfile << database_yaml.c_str() << std::endl;
+            outfile.close();
+        }
+
+        gns::assets::AssetRegistry::Add(guid, {
+            gns::assets::AssetKind::Source, AssetLibrary::assetDatabase[guid].assetType, guid,  AssetLibrary::assetDatabase[guid].assetName,
+            PathManager::AssetsPath + relative_path + Extension,
+            0,0
+            });
+
+    }
+
+    return import_result;
 }

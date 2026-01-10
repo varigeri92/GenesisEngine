@@ -62,6 +62,11 @@ namespace gns
 				return nullptr;
 		}
 
+		static Object* GetObj(guid guid)
+		{
+			return Get<Object>(guid);
+		}
+
 		template<typename T, typename = std::enable_if<std::is_base_of<Object, T>::value>::type, typename... Args>
 		static T* Find(const std::string& name)
 		{

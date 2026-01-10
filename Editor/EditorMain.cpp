@@ -14,6 +14,8 @@
 #include "Gui/Windows/MenuWindow.h"
 #include "Gui/Windows/SceneView.h"
 #include "Gui/Windows/ShadowDebuggerWindow.h"
+#include "Gui/Windows/AssetImporterWindow.h"
+
 
 
 #define PROJECT_NAME  "Genesis Engine - Editor"
@@ -192,6 +194,7 @@ int main(int argc, char* argv[])
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::InspectorWindow>();
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::HierarchyView>();
 		gns::GuiWindowDrawer::CreateGUIWindow<gns::editor::gui::SceneView>();
+		gns::GuiWindowDrawer::CreateGUIWindow<AssetImporterWindow>();
 		//gns::GuiWindowDrawer::CreateGUIWindow<ShadowDebuggerWindow>();
 
 	});

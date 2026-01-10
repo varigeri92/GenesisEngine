@@ -29,7 +29,6 @@ namespace gns::editor::assets
 		static bool IsImported(const std::string& filePath);
 		static bool IsMeta(const std::string& filePath);
 
-		static void OpenImportWindow(gns::assets::AssetType type);
 		static AssetMetadata* GetMetadata(const std::string& assetPath);
 		static gns::assets::MeshAssetDescription GetMeshAsset(const AssetMetadata& asset_metadata);
 
@@ -38,5 +37,6 @@ namespace gns::editor::assets
 	private:
 		static bool ImportMesh(std::string file_path, MeshImportOptions options, guid guid);
 		static bool ImportTexture(const std::string& file_path, TextureImportOptions& out_options, guid guid);
+		static bool ImportAssetInternal(const gns::assets::AssetType assetType, const std::string& relative_path, const gns::guid guid);
 	};
 }

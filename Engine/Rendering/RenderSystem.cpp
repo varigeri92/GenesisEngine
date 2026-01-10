@@ -173,24 +173,37 @@ void gns::RenderSystem::OnAssetLoaded(gns::assets::AssetManager::AssetLoadedEven
 	    break;
     case assets::AssetType::Mesh:
 	    {
-            Entity entity = Entity::CreateEntity(loadEvent.assetName);
-            entity::MeshComponent& mesh_component = entity.AddComponet<entity::MeshComponent>();
-            mesh_component.meshAsset = loadEvent.loadedAsset;
-            mesh_component.meshes.reserve(loadEvent.primaryObjects.size());
-            mesh_component.materials.reserve(loadEvent.primaryObjects.size());
-    		for (size_t i = 0; i < loadEvent.primaryObjects.size(); i++)
-	        {
-                rendering::Mesh* mesh = Object::Get<rendering::Mesh>(loadEvent.primaryObjects[i]);
-                UploadMesh(mesh);
-                rendering::Material* material = Object::Get<rendering::Material>(loadEvent.secondaryObjects[i]);
-				mesh_component.meshes.push_back(mesh);
-				mesh_component.materials.push_back(material);
-	        }
+            if (loadEvent.filed_ptr == nullptr)
+            {
+	            Entity entity = Entity::CreateEntity(loadEvent.assetName);
+	            entity::MeshComponent& mesh_component = entity.AddComponet<entity::MeshComponent>();
+	            mesh_component.meshAssetHandle.AssignObject(loadEvent.loadedAsset, loadEvent.assetType);
+	            mesh_component.meshes.reserve(loadEvent.primaryObjects.size());
+	            mesh_component.materials.reserve(loadEvent.primaryObjects.size());
+    			for (size_t i = 0; i < loadEvent.primaryObjects.size(); i++)
+		        {
+	                rendering::Mesh* mesh = Object::Get<rendering::Mesh>(loadEvent.primaryObjects[i]);
+	                UploadMesh(mesh);
+	                rendering::Material* material = Object::Get<rendering::Material>(loadEvent.secondaryObjects[i]);
+					mesh_component.meshes.push_back(mesh);
+					mesh_component.materials.push_back(material);
+		        }
+            }else
+            {
+                LOG_WARNING("Setting Mesh Reference directly Is not allowed!");
+            }
 	    }
 	    break;
     case assets::AssetType::Texture:
 		{
 	        LOG_INFO("LOAD TEXTURE SUCCESS");
+            gns::rendering::Texture* _texture = gns::Object::Get<gns::rendering::Texture>(loadEvent.loadedAsset);
+            if (_texture->hdr)
+            {
+                loadEvent.filed_ptr->AssignObject(loadEvent.loadedAsset, loadEvent.assetType);
+                return;
+            }
+            LOG_WARNING("Assigned Texture is not an HDR map. Ignoring...");
 	    }
 	    break;
     case assets::AssetType::Sound:

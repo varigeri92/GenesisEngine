@@ -305,7 +305,7 @@ void gns::rendering::Renderer::BuildDrawData()
             };
             sky_light.direction = { forward.x, forward.y, forward.z, transform.rotation.y };
             sky_light.color = { color.color.r, color.color.g, color.color.b, light.intensity};
-            Texture* hdr_texture = Object::Get<Texture>(skyComp.hdr);
+            Texture* hdr_texture = Object::Get<Texture>(skyComp.hdr_texture.GetGuid());
             if(hdr_texture)
             {
 	            if(hdr_texture->handle.handle != currenthandle)
