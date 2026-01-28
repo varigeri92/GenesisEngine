@@ -70,6 +70,7 @@ namespace gns::assets
 	{
 		AssetDescriptionHeader assetHeader;
 		std::string src_path;
+		bool isStatic;
 		std::vector<SubMesh> sub_meshes;
 	};
 

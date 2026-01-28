@@ -14,6 +14,8 @@ namespace gns::editor::assets
 	{
 		bool isStatic = true;
 		bool import_materials = true;
+		bool import_skeleton = true;
+		bool import_textures = true;
 	};
 
 	struct TextureImportOptions : public IAssetImportOptions
@@ -25,7 +27,7 @@ namespace gns::editor::assets
 	class AssetImporter
 	{
 	public:
-		static bool ImportAsset(const std::string& filePath, bool reImport = false);
+		static bool ImportAsset(const std::string& filePath, bool reImport, std::function<void()> callback);
 		static bool IsImported(const std::string& filePath);
 		static bool IsMeta(const std::string& filePath);
 
@@ -37,6 +39,8 @@ namespace gns::editor::assets
 	private:
 		static bool ImportMesh(std::string file_path, MeshImportOptions options, guid guid);
 		static bool ImportTexture(const std::string& file_path, TextureImportOptions& out_options, guid guid);
-		static bool ImportAssetInternal(const gns::assets::AssetType assetType, const std::string& relative_path, const gns::guid guid);
+		static bool ImportAssetInternal(
+			const gns::assets::AssetType assetType, const std::string& relative_path, 
+			const gns::guid guid, void* options);
 	};
 }

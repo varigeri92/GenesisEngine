@@ -98,7 +98,7 @@ void gns::editor::gui::SceneView::OnWindowDraw()
 			const std::string& payload_string = *static_cast<std::string*>(payload->Data);
 			LOG_INFO(payload_string);
 			//...
-			if(assets::AssetImporter::ImportAsset(payload_string, false))
+			assets::AssetImporter::ImportAsset(payload_string, false, [payload_string]()
 			{
 				AssetMetadata* metadata_ptr = assets::AssetImporter::GetMetadata(payload_string);
 				if (metadata_ptr->assetType == gns::assets::AssetType::Mesh)
@@ -106,7 +106,7 @@ void gns::editor::gui::SceneView::OnWindowDraw()
 					const gns::assets::AssetInfo& info = gns::assets::AssetRegistry::Get(metadata_ptr->assetGuid);
 					gns::assets::AssetManager::LoadAsset(info);
 				}
-			}
+			});
 			//...
 		}
 		ImGui::EndDragDropTarget();

@@ -63,6 +63,7 @@ namespace gns
 		{
 			m_listeners.clear();
 		}
+
 	};
 
 	struct EventListener

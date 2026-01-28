@@ -51,16 +51,18 @@ std::unordered_map<size_t, std::function<void(const std::string& name, void* com
 				{
 					const std::string& payload_string = *static_cast<std::string*>(payload->Data);
 					LOG_INFO(payload_string);
-					if (gns::editor::assets::AssetImporter::ImportAsset(payload_string, false))
+					gns::editor::assets::AssetImporter::ImportAsset(
+						payload_string, 
+						false,[payload_string]()
 					{
+						LOG_INFO(payload_string);
 						gns::AssetMetadata* metadata_ptr = gns::editor::assets::AssetImporter::GetMetadata(payload_string);
 						if (metadata_ptr->assetType == gns::assets::AssetType::Texture)
 						{
 							const gns::assets::AssetInfo& info = gns::assets::AssetRegistry::Get(metadata_ptr->assetGuid);
 							gns::assets::AssetManager::LoadAsset(info);
 						}
-					}
-
+					});
 				}
 				ImGui::EndDragDropTarget();
 			}
@@ -80,7 +82,6 @@ std::unordered_map<size_t, std::function<void(const std::string& name, void* com
 				else
 					label = gns::assets::AssetRegistry::Get(handle_ptr->GetGuid()).name;
 			}
-
 			ImGui::Button(label.c_str(), { ImGui::GetContentRegionAvail().x, 0 });
 			if (ImGui::BeginDragDropTarget())
 			{
@@ -88,7 +89,8 @@ std::unordered_map<size_t, std::function<void(const std::string& name, void* com
 				{
 					const std::string& payload_string = *static_cast<std::string*>(payload->Data);
 					LOG_INFO(payload_string);
-					if (gns::editor::assets::AssetImporter::ImportAsset(payload_string, false))
+					gns::editor::assets::AssetImporter::ImportAsset(payload_string, false, 
+						[payload_string, handle_ptr]()
 					{
 						gns::AssetMetadata* metadata_ptr = gns::editor::assets::AssetImporter::GetMetadata(payload_string);
 						if (metadata_ptr->assetType == handle_ptr->GetType())
@@ -100,7 +102,7 @@ std::unordered_map<size_t, std::function<void(const std::string& name, void* com
 						{
 							LOG_WARNING("Asset type mismatch!");
 						}
-					}
+					});
 				}
 				ImGui::EndDragDropTarget();
 			}
@@ -357,17 +359,20 @@ void gns::editor::gui::InspectorWindow::DrawInspectedEntity()
 						{
 							const std::string& payload_string = *static_cast<std::string*>(payload->Data);
 							LOG_INFO(payload_string);
-							if (assets::AssetImporter::ImportAsset(payload_string, false))
-							{
-								AssetMetadata* metadata_ptr = assets::AssetImporter::GetMetadata(payload_string);
-								if (metadata_ptr->assetType == gns::assets::AssetType::Texture)
+							assets::AssetImporter::ImportAsset(payload_string, false, 
+								[payload_string, currentSelectedEntityMaterial, i]()
 								{
-									
-									const gns::assets::AssetInfo& info = gns::assets::AssetRegistry::Get(metadata_ptr->assetGuid);
-									gns::assets::AssetManager::LoadAsset(info);
-									currentSelectedEntityMaterial->textures[i] = Object::Get<rendering::Texture>(metadata_ptr->assetGuid);
-								}
-							}
+									AssetMetadata* metadata_ptr = assets::AssetImporter::GetMetadata(payload_string);
+									if (metadata_ptr->assetType == gns::assets::AssetType::Texture)
+									{
+										
+										const gns::assets::AssetInfo& info = gns::assets::AssetRegistry::Get(metadata_ptr->assetGuid);
+										gns::assets::AssetManager::LoadAsset(info);
+										LOG_INFO(std::to_string(i));
+										currentSelectedEntityMaterial->textures[i] = Object::Get<rendering::Texture>(metadata_ptr->assetGuid);
+									}
+								});
+							
 						}
 						ImGui::EndDragDropTarget();
 					}
@@ -425,14 +430,14 @@ void gns::editor::gui::InspectorWindow::DrawInspectedAsset()
 	{
 		if(ImGui::Button("Reimport", { available_Width, 0 }))
 		{
-			assets::AssetImporter::ImportAsset(currentSelectedAssetPath, true);
+			//assets::AssetImporter::ImportAsset(currentSelectedAssetPath, true);
 		}
 	}
 	else
 	{
 		if (ImGui::Button("Import", { available_Width, 0 }))
 		{
-			assets::AssetImporter::ImportAsset(currentSelectedAssetPath, true);
+			//assets::AssetImporter::ImportAsset(currentSelectedAssetPath, true);
 		}
 	}
 	

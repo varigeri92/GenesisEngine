@@ -40,7 +40,7 @@ std::unordered_map<std::string, AssetType> fileExtensionAssetTypeMap = {
 
 }
 
-bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath, bool reImport)
+bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath, bool reImport, std::function<void()> callback)
 {
     std::string relative_path;
     if(fileUtils::IsRootedPath(filePath))
@@ -57,30 +57,42 @@ bool gns::editor::assets::AssetImporter::ImportAsset(const std::string& filePath
     if(IsImported(relative_path))
     {
         if (reImport)
-	        try
-	        {
-				guid = YAML::LoadFile(
+            try
+            {
+                guid = YAML::LoadFile(
                     PathManager::FromAssetsRelative(relative_path + ".meta"))["asset_guid"].as<size_t>();
-	        }
-	        catch (const std::exception& e)
-	        {
+            }
+            catch (const std::exception& e)
+            {
                 LOG_ERROR("Failed to read YAML '{}': {}", relative_path, e.what());
-	        }
+            }
         else
-            return true;
+        {
+            callback();
+			return true;
+        }
+
     }
     gns::assets::AssetType assetType = assets::AssetImporter::GetAssetType(fileUtils::GetFileExtension(relative_path));
     AssetImporterWindow* importer_window = reinterpret_cast<AssetImporterWindow*>(gns::GuiWindowDrawer::GetWindow("Import Asset"));
-	
 	if (importer_window)
 	{
-		AssetImporterWindow::MeshImportSettings settings = 
+        importer_window->OnImportSettingsEvent.Clear();
+		AssetImporterWindow::GenericImportSettings settings =
 			{true, true, false, true, false};
-        importer_window->OpenMeshImporterWindow(filePath, assetType, settings);
+        importer_window->OpenImporterWindow(filePath, assetType, settings);
+        EventListener_T<AssetImporterWindow::GenericImportSettings> meshImportListener{
+        [assetType, relative_path, guid, callback](AssetImporterWindow::GenericImportSettings evt){
+
+                if (ImportAssetInternal(assetType, relative_path, guid, &evt))
+					callback();
+                else
+                {
+                    LOG_ERROR("IMPORT FAILED!");
+                }
+		} };
+        importer_window->OnImportSettingsEvent.AddListener(meshImportListener);
 	}
-
-
-    return ImportAssetInternal(assetType, relative_path, guid);
 }
 
 bool gns::editor::assets::AssetImporter::IsImported(const std::string& filePath)
@@ -196,6 +208,10 @@ bool gns::editor::assets::AssetImporter::ImportMesh(std::string file_path, MeshI
 	            materialGuids.emplace_back(Guid::GetNewGuid());
 	        }
 	    }
+	    else
+	    {
+            LOG_INFO("Skipp material import");
+	    }
 
 	    for (size_t m = 0; m < scene->mNumMeshes; m++)
 	    {
@@ -206,7 +222,8 @@ bool gns::editor::assets::AssetImporter::ImportMesh(std::string file_path, MeshI
 	    out_gnsMesh_file << YAML::BeginMap;
 		out_gnsMesh_file << "asset_guid" << guid;
 	    out_gnsMesh_file << "asset_name" << assetname;
-	    out_gnsMesh_file << "file_path" << file_path;
+        out_gnsMesh_file << "file_path" << file_path;
+        out_gnsMesh_file << "static" << options.isStatic;
 	    out_gnsMesh_file << "sub_meshes" << YAML::BeginSeq;
 	    for (gns::assets::SubMesh subMesh : meshAsset.sub_meshes)
 	    {
@@ -282,15 +299,25 @@ bool gns::editor::assets::AssetImporter::ImportTexture(const std::string& file_p
 }
 
 bool gns::editor::assets::AssetImporter::ImportAssetInternal(
-    const  gns::assets::AssetType assetType, const std::string& relative_path, const  gns::guid guid)
+    const  gns::assets::AssetType assetType, const std::string& relative_path, const  gns::guid guid, void* options)
 {
+    AssetImporterWindow::GenericImportSettings* importSettings = static_cast<AssetImporterWindow::GenericImportSettings*>(options);
+
     bool import_result = false;
 
     switch (assetType) {
     case gns::assets::AssetType::None:
         break;
     case gns::assets::AssetType::Mesh:
-        import_result = ImportMesh(relative_path, {}, guid);
+	    {
+	        MeshImportOptions mesh_import_options = {
+	            .isStatic = importSettings->isStatic,
+	            .import_materials = importSettings->importMaterials,
+				.import_skeleton = importSettings->importSkeleton,
+				.import_textures = importSettings->importTextures
+			};
+	        import_result = ImportMesh(relative_path, mesh_import_options, guid);
+	    }
         break;
     case gns::assets::AssetType::Texture:
     {
@@ -307,7 +334,9 @@ bool gns::editor::assets::AssetImporter::ImportAssetInternal(
         break;
     case gns::assets::AssetType::Compute:
         break;
-    default:;
+    default:
+        LOG_ERROR("Unknown asset type!");
+    	break;
     }
 
     if (import_result)

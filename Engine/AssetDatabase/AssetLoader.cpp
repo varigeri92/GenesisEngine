@@ -77,102 +77,10 @@ void LoadTextures(gns::RenderSystem* renderSystem, gns::rendering::Material* mat
     }
 }
 
-void LoadEmbededTextures(gns::RenderSystem* renderSystem, gns::rendering::Material* material, aiMaterial* mat, aiTextureType type, const void* data)
-{
-    // TODO: :)
-}
-
 
 void LoadMeshAsset(const MeshAssetDescription& mesh_asset, const std::function<void(const std::vector<guid>&, const std::vector<guid>&)>& onLoadSuccess_callback)
 {
-    std::string assetDir = gns::fileUtils::GetContainingDirectory(mesh_asset.src_path);
-    if (assetDir == "")
-        assetDir = PathHelper::AssetsPath;
-    Assimp::Importer importer;
-
-    const aiScene* scene = importer.ReadFile(PathHelper::FromAssetsRelative(mesh_asset.src_path),
-        aiProcess_CalcTangentSpace |
-        aiProcess_Triangulate |
-        aiProcess_JoinIdenticalVertices |
-        aiProcess_SortByPType);
-
-    if (nullptr == scene) {
-        LOG_ERROR(importer.GetErrorString());
-        return;
-    }
-
-    if (!scene->HasMeshes())
-        return;
-
-    std::vector<guid> loaded_MeshGuids = {};
-    loaded_MeshGuids.reserve(scene->mNumMeshes);
-    std::vector<guid> loaded_materialGuids = {};
-    loaded_materialGuids.reserve(scene->mNumMeshes);
-	gns::RenderSystem* renderSystem = SystemsManager::GetSystem<gns::RenderSystem>();
-
-	std::vector<rendering::Material*> materials = {};
-    if (scene->HasMaterials())
-    {
-	    const std::string v_shader_path = R"(Shaders\colored_triangle_mesh.vert)";
-	    const std::string f_shader_path = R"(Shaders\tex_image.frag)";
-	    rendering::Shader* shader = renderSystem->CreateShader("default_shader", v_shader_path, f_shader_path);
-
-        for (size_t m = 0; m < scene->mNumMaterials; m++)
-        {
-            aiMaterial* mat = scene->mMaterials[m];
-
-            rendering::Material* material = renderSystem->CreateMaterial(shader, mat->GetName().C_Str());
-            material->uniformData.metallic_roughness_AO = { 0,1,1,0 };
-            renderSystem->ResetMaterialTextures(material);
-            materials.push_back(material);
-
-			LoadTextures(renderSystem, material, mat, aiTextureType_NORMALS, assetDir);
-            LoadTextures(renderSystem, material, mat, aiTextureType_BASE_COLOR, assetDir);
-            LoadTextures(renderSystem, material, mat, aiTextureType_EMISSIVE, assetDir);
-            LoadTextures(renderSystem, material, mat, aiTextureType_GLTF_METALLIC_ROUGHNESS, assetDir);
-            LoadTextures(renderSystem, material, mat, aiTextureType_AMBIENT_OCCLUSION, assetDir);
-        }
-    }
-
-    for (size_t m = 0; m < scene->mNumMeshes; m++)
-    {
-        loaded_MeshGuids.push_back(mesh_asset.sub_meshes[m].mesh_guid);
-        gns::rendering::Mesh* newMesh = gns::Object::CreateWithGuid<gns::rendering::Mesh>(
-            mesh_asset.sub_meshes[m].mesh_guid, scene->mMeshes[m]->mName.C_Str());
-
-        const aiMesh* mesh = scene->mMeshes[m];
-
-    	if (scene->HasMaterials())
-            loaded_materialGuids.emplace_back(materials[mesh->mMaterialIndex]->getGuid());
-
-        for (size_t v = 0; v < scene->mMeshes[m]->mNumVertices; v++)
-        {
-            newMesh->positions.push_back({ mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z });
-            newMesh->normals.push_back({ mesh->mNormals[v].x, mesh->mNormals[v].y, mesh->mNormals[v].z });
-            newMesh->colors.push_back({ mesh->mNormals[v].x, mesh->mNormals[v].y, mesh->mNormals[v].z, 1.f });
-            newMesh->uvs.push_back({ mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y * -1 });
-        }
-        if (mesh->HasTangentsAndBitangents())
-        {
-            for (size_t v = 0; v < scene->mMeshes[m]->mNumVertices; v++)
-            {
-                newMesh->tangents.push_back({ mesh->mTangents[v].x, mesh->mTangents[v].y, mesh->mTangents[v].z });
-                newMesh->biTangents.push_back({ mesh->mBitangents[v].x, mesh->mBitangents[v].y, mesh->mBitangents[v].z });
-            }
-        }
-        const size_t startindex = newMesh->indices.size();
-        for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
-            const aiFace& Face = mesh->mFaces[i];
-            for (uint32_t i = 0; i < Face.mNumIndices; i++)
-            {
-                uint32_t vi = Face.mIndices[i];
-                newMesh->indices.push_back(vi);
-            }
-        }
-        const uint32_t count = static_cast<uint32_t>(newMesh->indices.size());
-        renderSystem->UploadMesh(newMesh);
-    }
-    onLoadSuccess_callback(loaded_MeshGuids, loaded_materialGuids);
+    LOG_ERROR("Legacy Asset Loader IS called!");
 }
 
 AssetLoader::AssetLoader(const AssetInfo& info) : assetInfo(info){}
@@ -313,15 +221,8 @@ bool AssetLoader::LoadMeshSource(MeshAssetDescription mesh_asset)
     loaded_materialGuids.reserve(scene->mNumMeshes);
     gns::RenderSystem* renderSystem = SystemsManager::GetSystem<gns::RenderSystem>();
 
-
     std::vector<rendering::Material*> materials = {};
-    AssetManager::AssetLoadedEvent assetloaded = {};
-    assetloaded.assetName = assetInfo.name;
-    assetloaded.assetType = AssetType::Mesh;
-    assetloaded.loadedAsset = assetInfo.assetGuid;
-    assetloaded.primaryObjects.reserve(scene->mNumMeshes);
-    assetloaded.secondaryObjects.reserve(scene->mNumMeshes);
-    
+
 	if (scene->HasMaterials())
     {
         const std::string v_shader_path = R"(Shaders\colored_triangle_mesh.vert)";
@@ -346,6 +247,13 @@ bool AssetLoader::LoadMeshSource(MeshAssetDescription mesh_asset)
         }
     }
 
+	AssetManager::AssetLoadedEvent assetloaded = {};
+    assetloaded.assetName = assetInfo.name;
+    assetloaded.assetType = AssetType::Mesh;
+    assetloaded.loadedAsset = assetInfo.assetGuid;
+    assetloaded.primaryObjects.reserve(scene->mNumMeshes);
+    assetloaded.secondaryObjects.reserve(scene->mNumMeshes);
+    
 
     for (size_t m = 0; m < scene->mNumMeshes; m++)
     {
@@ -384,9 +292,25 @@ bool AssetLoader::LoadMeshSource(MeshAssetDescription mesh_asset)
         newMesh->bufferRange = { static_cast<uint32_t>(startindex), count };
         assetloaded.primaryObjects.push_back(mesh_asset.sub_meshes[m].mesh_guid);
         assetloaded.secondaryObjects.push_back(materials[mesh->mMaterialIndex]->getGuid());
+        
+    	if (!mesh_asset.isStatic)
+        {
+            AssetManager::AssetLoadedEvent dynamic_assetloaded;
+            dynamic_assetloaded.assetName = mesh->mName.C_Str();
+            dynamic_assetloaded.assetType = AssetType::Mesh;
+            dynamic_assetloaded.loadedAsset = mesh_asset.sub_meshes[m].mesh_guid;
+            dynamic_assetloaded.primaryObjects.reserve(1);
+            dynamic_assetloaded.secondaryObjects.reserve(1);
+            dynamic_assetloaded.primaryObjects.push_back(mesh_asset.sub_meshes[m].mesh_guid);
+            dynamic_assetloaded.secondaryObjects.push_back(materials[mesh->mMaterialIndex]->getGuid());
+
+            AssetManager::AssetLoadedEventQueue.emplace(dynamic_assetloaded);
+        }
     }
-	AssetManager::AssetLoadedEventQueue.emplace(assetloaded);
-    return true;
+    if (mesh_asset.isStatic)
+		AssetManager::AssetLoadedEventQueue.emplace(assetloaded);
+    
+	return true;
 }
 
 void AssetLoader::LoadTextureSource(TextureAssetDescription texture_asset)
@@ -449,6 +373,7 @@ MeshAssetDescription AssetLoader::GetMeshAssetDescription(const std::string& ass
     MeshAssetDescription assetDescription = {
         .assetHeader = header,
         .src_path = assetRootNode["file_path"].as<std::string>(),
+        .isStatic = assetRootNode["static"].as<bool>(),
         .sub_meshes = {}
     };
     for (const auto & subMesh: assetRootNode["sub_meshes"])
@@ -597,6 +522,7 @@ void LoadTexture(const std::string& filePath, rendering::Texture& texture, bool*
 
 void LoadAsset(const std::string& filePath)
 {
+    LOG_ERROR("Legacy Asset Loader!");
     AssetType type = fileExtensionAssetTypeMap[fileUtils::GetFileExtension(filePath)];
 
     switch (type)

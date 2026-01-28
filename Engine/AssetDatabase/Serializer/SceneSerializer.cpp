@@ -269,6 +269,18 @@ void gns::serialization::SceneSerializer::RegisterTable()
 		}
 	);
 
+	YamlFieldSerializationEntry::RegisterSerializeableFiled<gns::GnsHandle>(
+		[](const std::string& name, char* componentData, size_t offset, YAML::Emitter& out)
+		{
+			out << YAML::Key << name
+				<< YAML::Value << reinterpret_cast<GnsHandle*>(componentData + offset)->GetGuid();
+		}, [](char* componentData, size_t offset, YAML::Node& value)
+			{
+				gns::GnsHandle& _value = *reinterpret_cast<gns::GnsHandle*>(componentData + offset);
+				_value.SetGuid(value.as<gns::guid>());
+			}
+			);
+
 	YamlFieldSerializationEntry::RegisterSerializeableFiled<bool>(
 		[](const std::string& name, char* componentData, size_t offset, YAML::Emitter& out)
 		{
@@ -475,6 +487,7 @@ std::string gns::serialization::SceneSerializer::SerializeScene(gns::scene::Scen
 
 gns::scene::Scene* gns::serialization::SceneSerializer::DeserializeScene(const std::string& sceneFilePath)
 {
+	scene::SceneManager::UnloadActiveScene();
 	YAML::Node root = YAML::LoadFile(sceneFilePath);
 	gns::scene::Scene* newScene = scene::SceneManager::CreateScene(root["scene_name"].as<std::string>());
 	const std::string versionString = VERSION;

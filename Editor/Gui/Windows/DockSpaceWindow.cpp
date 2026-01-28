@@ -55,6 +55,11 @@ void DockSpaceWindow::OnWindowDraw()
 			{
 				LOG_INFO("Import Asset(s)... ");
 			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Unload Scene"))
+			{
+				//gns::scene::SceneManager::UnloadActiveScene();
+			}
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Edit")) {
@@ -78,18 +83,15 @@ DockSpaceWindow::~DockSpaceWindow() = default;
 void DockSpaceWindow::InitWindow()
 {
 	m_open = true;
-	//GuiWindow::InitWindow();
 	return;
 }
 
 bool DockSpaceWindow::OnWindowBegin()
 {
-	//GuiWindow::OnWindowBegin();
 	return true;
 }
 
 void DockSpaceWindow::OnWindowEnd()
 {
-	//GuiWindow::OnWindowEnd();
 	return;
 }

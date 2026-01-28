@@ -57,6 +57,8 @@ namespace gns
 				LOG_ERROR("Type: " + std::to_string(static_cast<uint32_t>(type)) + " can't be assigned to "
 				+ std::to_string(static_cast<uint32_t>(m_type)));
         }
+
+        void SetGuid(guid guid) { m_guid = guid; }
 	};
 
 	class Guid

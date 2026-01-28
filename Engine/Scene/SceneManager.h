@@ -17,12 +17,12 @@ namespace gns::scene
 			Additive, UnloadCurrent
 		};
 
-		static Scene& GetActiveScene();
-		static Scene* CreateScene(const std::string& name);
-		static void SetActiveScene(Scene* scene);
-		static void UnloadScene(const std::string& name);
-		static void LoadScene(const std::string& path, LoadMode mode = LoadMode::Additive);
-
+		GNS_API static Scene& GetActiveScene();
+		GNS_API static Scene* CreateScene(const std::string& name);
+		GNS_API static void SetActiveScene(Scene* scene);
+		GNS_API static void UnloadScene(const std::string& name);
+		GNS_API static void UnloadActiveScene();
+		GNS_API static void LoadScene(const std::string& path, LoadMode mode = LoadMode::Additive);
 	private:
 		static void AddEntity(entityHandle entity, Scene* scene = nullptr);
 		static void RemoveEntity(entityHandle entity, Scene* scene = nullptr);

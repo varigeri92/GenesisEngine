@@ -78,6 +78,15 @@ void gns::scene::SceneManager::UnloadScene(const std::string& name)
 {
 }
 
+void gns::scene::SceneManager::UnloadActiveScene()
+{
+	for (int i = 0; i < sActiveScene->m_entities.size(); ++i)
+	{
+		Entity entity{ sActiveScene->m_entities[i] };
+		entity.Delete();
+	}
+}
+
 void gns::scene::SceneManager::LoadScene(const std::string& path, LoadMode mode)
 {
 }
